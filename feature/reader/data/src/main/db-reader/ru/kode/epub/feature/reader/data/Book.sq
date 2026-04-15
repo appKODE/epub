@@ -1,12 +1,12 @@
-import kotlin.collections.List;
 import kotlin.time.Instant;
 
 CREATE TABLE Book (
   id TEXT NOT NULL PRIMARY KEY,
   name TEXT NOT NULL,
   uri TEXT NOT NULL,
+  cover TEXT,
   updatedAt INTEGER AS Instant NOT NULL,
-  lastChapter TEXT,
+  lastChapter INTEGER,
   lastTag INTEGER,
   chapters INTEGER
 );
@@ -16,7 +16,7 @@ INSERT OR REPLACE INTO Book
 VALUES ?;
 
 selectAll:
-SELECT id, name, uri, updatedAt, lastChapter, lastTag, chapters FROM Book
+SELECT id, name, uri, cover, updatedAt, lastChapter, lastTag, chapters FROM Book
 ORDER BY updatedAt DESC;
 
 delete:

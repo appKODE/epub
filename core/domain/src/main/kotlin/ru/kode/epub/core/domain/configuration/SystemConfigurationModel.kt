@@ -11,4 +11,7 @@ class SystemConfigurationModel @Inject constructor(
   fun processConfigurationChange(configuration: SystemConfiguration) {
     repository.updateSystemConfiguration { configuration }
   }
+
+  val screenOrientation = repository.screenOrientation
+  val isDarkTheme = repository.isDarkModeEnabled
 }

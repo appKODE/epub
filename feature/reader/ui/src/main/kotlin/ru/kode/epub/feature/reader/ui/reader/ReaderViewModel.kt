@@ -1,33 +1,38 @@
 package ru.kode.epub.feature.reader.ui.reader
 
+import android.content.Context
 import androidx.compose.runtime.Stable
 import kotlinx.coroutines.flow.update
 import me.tatarka.inject.annotations.Assisted
 import me.tatarka.inject.annotations.Inject
 import ru.kode.epub.core.ui.screen.ViewModel
+import ru.kode.epub.feature.reader.domain.entity.Book
+import ru.kode.epub.lib.EpubParser
 import ru.kode.epub.lib.entity.EpubBook
 import ru.kode.epub.lib.entity.TocEntry
 
 @Stable
 class ReaderViewModel @Inject constructor(
-  @Assisted val book: EpubBook
+  private val context: Context,
+  @Assisted val book: Book
 ) : ViewModel<ViewState, Unit>() {
+  val epub = EpubParser.parse(context, book.uri)
 
   override fun initialState() = ViewState()
 
   override fun onStart() {
     stateFlow.value = ViewState(
-      elements = book.flattenElements(),
-      toc = book.toc,
+      elements = epub.flattenElements(),
+      toc = epub.toc,
       bookInfo = BookInfo(
-        title = book.title,
-        author = book.author,
-        coverImage = book.coverImage,
-        categories = book.categories,
-        language = book.language,
-        description = book.description
+        title = epub.title,
+        author = epub.author,
+        coverImage = epub.coverImage,
+        categories = epub.categories,
+        language = epub.language,
+        description = epub.description
       ),
-      fontFiles = book.fontFiles
+      fontFiles = epub.fontFiles
     )
   }
 
@@ -53,9 +58,9 @@ class ReaderViewModel @Inject constructor(
   }
 
   private fun selectTocEntry(entry: TocEntry) {
-    val baseIndex = book.chapters.take(entry.chapterIndex).sumOf { it.elements.size }
+    val baseIndex = epub.chapters.take(entry.chapterIndex).sumOf { it.elements.size }
     val anchorOffset = entry.anchorId
-      ?.let { book.chapters.getOrNull(entry.chapterIndex)?.anchorIndex?.get(it) }
+      ?.let { epub.chapters.getOrNull(entry.chapterIndex)?.anchorIndex?.get(it) }
       ?: 0
     stateFlow.update { it.copy(scrollToElementIndex = baseIndex + anchorOffset) }
   }

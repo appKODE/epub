@@ -4,23 +4,32 @@ import android.content.Context
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import me.tatarka.inject.annotations.Provides
 import ru.kode.epub.core.data.storage.timestampAdapter
+import ru.kode.epub.core.domain.di.AppScope
 import ru.kode.epub.core.domain.di.SingleIn
 import ru.kode.epub.feature.reader.data.Book
 import ru.kode.epub.feature.reader.data.BooksDatabase
-import ru.kode.epub.feature.reader.domain.di.ReaderScope
+import ru.kode.epub.feature.reader.data.SettingsDatabase
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesTo
 
-@ContributesTo(ReaderScope::class)
+@ContributesTo(AppScope::class)
 interface ReaderDataModule {
 
   @Provides
-  @SingleIn(ReaderScope::class)
+  @SingleIn(AppScope::class)
   fun booksDatabase(context: Context): BooksDatabase {
     return BooksDatabase(
       driver = AndroidSqliteDriver(BooksDatabase.Schema, context, "books"),
       BookAdapter = Book.Adapter(
         updatedAtAdapter = timestampAdapter()
       )
+    )
+  }
+
+  @Provides
+  @SingleIn(AppScope::class)
+  fun settingsDatabase(context: Context): SettingsDatabase {
+    return SettingsDatabase(
+      driver = AndroidSqliteDriver(SettingsDatabase.Schema, context, "settings")
     )
   }
 }

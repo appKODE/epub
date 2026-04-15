@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import ru.kode.epub.core.ui.screen.AppScreen
 import ru.kode.epub.core.uikit.R
 import ru.kode.epub.core.uikit.theme.AppTheme
+import ru.kode.epub.feature.reader.ui.bottombar.BottomBarStateRestoreEffect
 
 @Composable
 fun ReaderScreen(
@@ -35,6 +36,8 @@ fun ReaderScreen(
 ) = AppScreen(viewModel) { state ->
   val fontFamily = rememberEpubFontFamily(state.fontFiles)
   val listState = rememberLazyListState()
+
+  BottomBarStateRestoreEffect(visible = false)
 
   LaunchedEffect(state.scrollToElementIndex) {
     state.scrollToElementIndex?.let { index ->

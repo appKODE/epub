@@ -14,6 +14,8 @@ import ru.kode.epub.core.routing.viewModel
 import ru.kode.epub.feature.reader.domain.entity.Book
 import ru.kode.epub.feature.reader.routing.ReaderNavigationComponent.Child
 import ru.kode.epub.feature.reader.routing.ReaderNavigationComponent.Config
+import ru.kode.epub.feature.reader.ui.bottombar.BottomBarController
+import ru.kode.epub.feature.reader.ui.bottombar.BottomBarSection
 import ru.kode.epub.feature.reader.ui.reader.ReaderViewModel
 import ru.kode.epub.feature.reader.ui.recent.RecentBooksResult
 import ru.kode.epub.feature.reader.ui.recent.RecentBooksViewModel
@@ -27,6 +29,7 @@ class ReaderNavigationComponent(
   val onFinish: () -> Unit
 ) : FlowNavigationComponent<Config, Child>(context) {
 
+  val bottomBarController = BottomBarController()
   val model = component.model
 
   override val scope = component.coroutineScope()
@@ -35,10 +38,26 @@ class ReaderNavigationComponent(
 
   override fun onCreate() {
     super.onCreate()
+
     when (params) {
       is ReaderFlowParams.Book -> model.readEpub(params.uri)
       is ReaderFlowParams.Recent -> Unit
     }
+
+    bottomBarController.setActiveSection(BottomBarSection.Recent)
+    bottomBarController.show()
+
+    bottomBarController
+      .sectionClicks()
+      .onEach { section ->
+        bottomBarController.setActiveSection(section)
+        when (section) {
+          BottomBarSection.Recent -> navigate { bringToFront(Config.Recent) }
+          BottomBarSection.Settings -> navigate { bringToFront(Config.Settings) }
+        }
+      }
+      .launchIn(scope)
+
     model.epubReads
       .onEach { book -> navigate { bringToFront(Config.Reader(book)) } }
       .launchIn(scope)

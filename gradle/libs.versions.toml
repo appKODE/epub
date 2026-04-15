@@ -29,6 +29,7 @@ detekt = "1.23.8"
 detekt-rules-compose = "1.4.0"
 cachefix = "3.0.3"
 ksp = "2.3.4"
+activity-ktx = "1.13.0"
 
 [libraries]
 androidx-core = { module = "androidx.core:core", version.ref = "androidx-core" }
@@ -83,6 +84,7 @@ compose-compiler-plugin = { module = "org.jetbrains.kotlin:compose-compiler-grad
 detekt-plugin = { module = "io.gitlab.arturbosch.detekt:detekt-gradle-plugin", version.ref = "detekt" }
 cachefix-plugin = { module = "org.gradle.android.cache-fix:org.gradle.android.cache-fix.gradle.plugin", version.ref = "cachefix" }
 ksp-plugin = { module = "com.google.devtools.ksp:com.google.devtools.ksp.gradle.plugin", version.ref = "ksp" }
+androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activity-ktx" }
 
 [bundles]
 core = [

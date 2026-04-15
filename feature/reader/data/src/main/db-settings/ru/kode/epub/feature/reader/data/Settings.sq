@@ -1,0 +1,11 @@
+CREATE TABLE Settings (
+  key TEXT NOT NULL PRIMARY KEY,
+  value TEXT
+);
+
+insertOrReplace:
+INSERT OR REPLACE INTO Settings
+VALUES ?;
+
+selectAll:
+SELECT key, value FROM Settings;

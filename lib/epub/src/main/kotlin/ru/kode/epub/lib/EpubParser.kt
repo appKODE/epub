@@ -77,7 +77,7 @@ object EpubParser {
       ?.let { ncxItem ->
         val ncxPath = joinPaths(opfDir, ncxItem.href)
         val ncxContent = fileMap[ncxPath]?.toString(Charsets.UTF_8)
-        if (ncxContent != null) parseToc(ncxContent, ncxPath, chapterPathToIndex) else null
+        ncxContent?.let { parseToc(ncxContent, ncxPath, chapterPathToIndex) }
       }
       ?: emptyList()
 
@@ -117,7 +117,7 @@ object EpubParser {
   }
 
   // ─────────────────────────── ZIP ───────────────────────────────────
-
+  @Suppress("NestedBlockDepth", "CyclomaticComplexMethod")
   private fun readZipEntries(context: Context, uri: Uri): Map<String, ByteArray> {
     val map = mutableMapOf<String, ByteArray>()
     context.contentResolver.openInputStream(uri)?.use { raw ->
@@ -170,6 +170,7 @@ object EpubParser {
     val coverManifestId: String?
   )
 
+  @Suppress("LoopWithTooManyJumpStatements", "CyclomaticComplexMethod")
   private fun parseOpf(xml: String): OpfData {
     val doc = parseXml(xml)
 
@@ -255,7 +256,8 @@ object EpubParser {
     chapterPathToIndex: Map<String, Int>
   ): TocEntry? {
     val title = navPoint.selectFirst("> navLabel > text")
-      ?.text()?.trim()
+      ?.text()
+      ?.trim()
       ?.takeIf { it.isNotEmpty() }
       ?: return null
 
@@ -304,6 +306,7 @@ object EpubParser {
     return EpubChapter(chapterTitle, inToc, elements, anchorIndex)
   }
 
+  @Suppress("NestedBlockDepth", "CyclomaticComplexMethod")
   private fun processElement(
     element: Element,
     result: MutableList<ContentElement>,
@@ -443,9 +446,11 @@ object EpubParser {
         "b", "strong" -> withBold {
           node.childNodes().forEach { appendNode(it) }
         }
+
         "i", "em" -> withItalic {
           node.childNodes().forEach { appendNode(it) }
         }
+
         else -> node.childNodes().forEach { appendNode(it) }
       }
     }

@@ -6,14 +6,20 @@ plugins {
 }
 
 sqldelight {
-    databases {
-      BooksDatabase {
-            packageName = "ru.kode.epub.feature.reader.data"
-            srcDirs "src/main/db-reader"
-            schemaOutputDirectory = file("src/main/db-reader/migrations/")
-            verifyMigrations = true
-        }
+  databases {
+    BooksDatabase {
+      packageName = "ru.kode.epub.feature.reader.data"
+      srcDirs "src/main/db-reader"
+      schemaOutputDirectory = file("src/main/db-reader/migrations/")
+      verifyMigrations = true
     }
+    SettingsDatabase {
+      packageName = "ru.kode.epub.feature.reader.data"
+      srcDirs "src/main/db-settings"
+      schemaOutputDirectory = file("src/main/db-settings/migrations/")
+      verifyMigrations = true
+    }
+  }
 }
 
 dependencies {

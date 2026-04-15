@@ -48,6 +48,7 @@ object CssResolver {
 
   // ─────────────────────────── Selector matching ─────────────────────────
 
+  @Suppress("ReturnCount")
   private fun selectorMatches(
     selector: String,
     tag: String,
@@ -91,6 +92,7 @@ object CssResolver {
 
   // ──────────────────────── Declaration → EpubStyle ──────────────────────
 
+  @Suppress("NestedBlockDepth", "CyclomaticComplexMethod")
   private fun toEpubStyle(decls: Map<String, String>): EpubStyle {
     var textAlign: EpubTextAlign? = null
     var fontSizePercent: Int? = null

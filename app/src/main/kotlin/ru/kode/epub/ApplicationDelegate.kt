@@ -1,6 +1,7 @@
 package ru.kode.epub
 
 import android.app.Application
+import ru.kode.epub.core.domain.entity.ScreenOrientation
 import ru.kode.epub.di.AppComponent
 import ru.kode.epub.di.AppComponentHolder
 import ru.kode.epub.di.create
@@ -15,7 +16,10 @@ class ApplicationDelegate : Application(), AppComponentHolder {
     _appComponent = buildAppComponent()
     super.onCreate()
     initLogging()
-    _appComponent.systemConfigurationModel.processConfigurationChange(resources.configuration.toSystemConfiguration())
+    _appComponent.systemConfigurationModel
+      .processConfigurationChange(
+        configuration = resources.configuration.toSystemConfiguration(ScreenOrientation.Portrait)
+      )
   }
 
   private fun buildAppComponent() = AppComponent::class.create(contextDelegate = this)

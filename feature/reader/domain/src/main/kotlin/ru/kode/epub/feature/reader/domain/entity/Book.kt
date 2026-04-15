@@ -9,13 +9,16 @@ data class Book(
   val id: String,
   val name: String,
   val uri: Uri,
+  val cover: Uri?,
   val updatedAt: LocalDateTime,
   val progress: Progress,
   val totalChapters: Long
 ) {
   @Immutable
   data class Progress(
-    val chapter: String?,
+    val chapter: Long,
     val tag: Long
   )
+
+  val readProgress: Float = progress.chapter / totalChapters.toFloat()
 }

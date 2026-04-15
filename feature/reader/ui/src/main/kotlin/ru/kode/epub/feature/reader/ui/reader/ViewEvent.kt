@@ -260,5 +260,6 @@ private fun localizedLanguageName(languageTag: String): String {
   val locale = Locale.forLanguageTag(languageTag)
   return locale.getDisplayLanguage(locale)
     .replaceFirstChar { it.uppercase() }
-    .takeIf { it.isNotBlank() } ?: languageTag
+    .takeIf { it.isNotBlank() }
+    ?: languageTag
 }

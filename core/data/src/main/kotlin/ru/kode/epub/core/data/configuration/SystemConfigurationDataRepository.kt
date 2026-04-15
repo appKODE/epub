@@ -10,6 +10,7 @@ import ru.kode.epub.core.domain.configuration.SystemConfiguration
 import ru.kode.epub.core.domain.configuration.SystemConfigurationRepository
 import ru.kode.epub.core.domain.di.AppScope
 import ru.kode.epub.core.domain.di.SingleIn
+import ru.kode.epub.core.domain.entity.ScreenOrientation
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
 
 @SingleIn(AppScope::class)
@@ -23,5 +24,9 @@ class SystemConfigurationDataRepository @Inject constructor() : SystemConfigurat
 
   override val isDarkModeEnabled: Flow<Boolean> = _systemConfiguration
     .mapNotNull { it?.isNightModeEnabled }
+    .distinctUntilChanged()
+
+  override val screenOrientation: Flow<ScreenOrientation> = _systemConfiguration
+    .mapNotNull { it?.screenOrientation }
     .distinctUntilChanged()
 }
