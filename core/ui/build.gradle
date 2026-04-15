@@ -1,0 +1,16 @@
+plugins {
+  id 'android-library-convention'
+  id 'compose-convention'
+}
+
+android {
+  namespace = 'ru.kode.epub.core.ui'
+}
+
+dependencies {
+  api libs.bundles.core
+  api libs.bundles.ui
+  implementation libs.androidx.activity.compose
+  implementation libs.essenty.back.handler
+  api project(":core:domain")
+}

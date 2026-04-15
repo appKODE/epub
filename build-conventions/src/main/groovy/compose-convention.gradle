@@ -1,0 +1,19 @@
+plugins {
+  id "org.jetbrains.kotlin.plugin.compose"
+}
+
+android {
+  buildFeatures {
+    compose = true
+  }
+
+  composeCompiler {
+    stabilityConfigurationFile = file("${rootDir.path}/stability_config.conf")
+  }
+
+  kotlinOptions {
+    jvmTarget = "17"
+    freeCompilerArgs += "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api"
+    freeCompilerArgs += "-opt-in=androidx.compose.animation.ExperimentalAnimationApi"
+  }
+}

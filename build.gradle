@@ -1,0 +1,71 @@
+plugins {
+  alias(libs.plugins.android.application) apply false
+  alias(libs.plugins.kotlin.android) apply false
+}
+
+configurations {
+  ktlintCli
+}
+
+dependencies {
+  ktlintCli(libs.ktlint.cli) {
+    attributes {
+      attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling, Bundling.EXTERNAL))
+    }
+  }
+}
+
+def kotlinSourcePatterns = [
+    "**/src/*/java/**/*.kt",
+    "**/src/*/kotlin/**/*.kt"
+]
+
+def ignoredSourcePatterns = [
+    "!**/build/**",
+    "!**/generated/**",
+    "!**/templates/**",
+    "!**/test/**",
+    "!templates/**"
+]
+
+tasks.register('ktlintCheck', JavaExec) {
+  group = 'verification'
+  description = 'Run ktlint check on all Android modules'
+
+  classpath = configurations.ktlintCli
+  mainClass = 'com.pinterest.ktlint.Main'
+
+  jvmArgs(
+      '--add-opens=java.base/java.lang=ALL-UNNAMED',
+      '--add-opens=java.base/java.util=ALL-UNNAMED'
+  )
+
+  doFirst {
+    if (!file("${rootDir}/.editorconfig").exists()) {
+      throw new GradleException(".editorconfig not found in project root")
+    }
+  }
+
+  args = [
+      '--editorconfig', rootDir.absolutePath.replace('\\', '/'),
+      '--relative'
+  ] + ignoredSourcePatterns + kotlinSourcePatterns
+}
+
+tasks.register('ktlintFormat', JavaExec) {
+  group = 'formatting'
+  description = 'Run ktlint format on all Android modules'
+
+  classpath = configurations.ktlintCli
+  mainClass = 'com.pinterest.ktlint.Main'
+
+  jvmArgs(
+      '--add-opens=java.base/java.lang=ALL-UNNAMED',
+      '--add-opens=java.base/java.util=ALL-UNNAMED'
+  )
+
+  args = [
+      '-F',
+      '--relative'
+  ] + ignoredSourcePatterns + kotlinSourcePatterns
+}

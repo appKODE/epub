@@ -1,0 +1,27 @@
+import kotlin.collections.List;
+import kotlin.time.Instant;
+
+CREATE TABLE Book (
+  id TEXT NOT NULL PRIMARY KEY,
+  name TEXT NOT NULL,
+  uri TEXT NOT NULL,
+  updatedAt INTEGER AS Instant NOT NULL,
+  lastChapter TEXT,
+  lastTag INTEGER,
+  chapters INTEGER
+);
+
+insertOrReplace:
+INSERT OR REPLACE INTO Book
+VALUES ?;
+
+selectAll:
+SELECT id, name, uri, updatedAt, lastChapter, lastTag, chapters FROM Book
+ORDER BY updatedAt DESC;
+
+delete:
+DELETE FROM Book WHERE id = ?;
+
+deleteOldest:
+DELETE FROM Book
+WHERE updatedAt = (SELECT MIN(updatedAt) FROM Book);

@@ -1,0 +1,35 @@
+plugins {
+  id 'com.android.library'
+  id 'org.jetbrains.kotlin.android'
+  id 'org.gradle.android.cache-fix'
+  id 'detekt-convention'
+}
+
+android {
+  compileSdk 36
+
+  defaultConfig {
+    minSdk 26
+  }
+
+  buildFeatures {
+    renderScript = false
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+
+  kotlinOptions {
+    jvmTarget = '17'
+    freeCompilerArgs += "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi"
+    freeCompilerArgs += "-opt-in=kotlinx.coroutines.FlowPreview"
+  }
+
+  kotlin {
+    jvmToolchain {
+      languageVersion = JavaLanguageVersion.of(17)
+    }
+  }
+}

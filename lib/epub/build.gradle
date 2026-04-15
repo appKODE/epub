@@ -1,0 +1,15 @@
+plugins {
+  id 'android-library-convention'
+  id 'compose-convention'
+}
+
+dependencies {
+  api libs.bundles.core
+  api libs.bundles.android
+  api libs.bundles.ui
+  api libs.kotlin.inject.runtime
+}
+
+android {
+    namespace 'ru.kode.epub.lib.epub'
+}

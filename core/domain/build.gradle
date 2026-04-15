@@ -1,0 +1,15 @@
+plugins {
+  id 'android-library-convention'
+}
+
+android {
+  namespace = 'ru.kode.epub.core.domain'
+}
+
+dependencies {
+  api libs.bundles.core
+  api libs.timber
+  api libs.compose.runtime // @Stable / @Immutable
+  api libs.kotlin.inject.runtime
+  api libs.androidx.annotation
+}

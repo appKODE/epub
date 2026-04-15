@@ -1,0 +1,72 @@
+plugins {
+  alias(libs.plugins.android.application)
+  alias(libs.plugins.kotlin.android)
+  alias(libs.plugins.cachefix)
+
+  id 'di-convention'
+  id 'compose-convention'
+  id 'detekt-convention'
+}
+
+android {
+  namespace = 'ru.kode.epub'
+  compileSdkVersion 36
+
+  defaultConfig {
+    applicationId "ru.kode.epub"
+    minSdk 26
+    targetSdk 36
+  }
+
+  signingConfigs {
+    debug {
+      storeFile file("debug.keystore")
+    }
+  }
+
+  buildFeatures {
+    buildConfig = true
+  }
+
+  buildTypes {
+    debug {
+      signingConfig = signingConfigs.debug
+      debuggable true
+      minifyEnabled false
+      resValue "string", "app_name", "[KODE] Epub"
+    }
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+
+  kotlinOptions {
+    jvmTarget = '17'
+  }
+
+  kotlin {
+    jvmToolchain {
+      languageVersion = JavaLanguageVersion.of(17)
+    }
+  }
+
+  packaging {
+    resources {
+      excludes += '/META-INF/{AL2.0,LGPL2.1}'
+    }
+  }
+}
+
+dependencies {
+  implementation libs.androidx.activity.compose
+  implementation libs.androidx.compat
+  // implementation libs.appcompat.resources
+  implementation libs.bundles.ui
+  implementation libs.coil.network.ktor
+
+  implementation project(":core:routing")
+  implementation project(":core:uikit")
+  implementation project(":feature:reader:routing")
+}

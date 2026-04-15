@@ -1,0 +1,123 @@
+[versions]
+agp = "8.13.2"
+kotlin = "2.3.20"
+coroutines = "1.10.2"
+
+kotlin-date-time = "0.7.1"
+
+androidx-core = "1.18.0"
+androidx-annotation = "1.10.0"
+androidx-activity-compose = "1.13.0"
+androidx-compat = "1.7.1"
+
+kotlin-inject = "0.8.0"
+anvil = "0.1.6"
+
+sqldelight = "2.3.2"
+
+timber = "5.0.1"
+leakcanary = "2.14"
+
+compose = "1.10.6"
+material3 = "1.4.0"
+coil = "3.4.0"
+decompose = "3.4.0"
+essenty = "2.5.0"
+ktlint = "0.46.0"
+detekt = "1.23.8"
+detekt-rules-compose = "1.4.0"
+cachefix = "3.0.3"
+ksp = "2.3.4"
+
+[libraries]
+androidx-core = { module = "androidx.core:core", version.ref = "androidx-core" }
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core" }
+androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidx-annotation" }
+
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "androidx-activity-compose" }
+
+androidx-compat = { module = "androidx.appcompat:appcompat", version.ref = "androidx-compat" }
+# appcompat-resources = { module = "androidx.appcompat:appcompat-resources", version.ref = "androidx-compat" }
+
+kotlin-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlin-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlin-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlin-date-time" }
+
+sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
+sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions-jvm", version.ref = "sqldelight" }
+sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
+
+timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
+
+kotlin-inject-runtime = { module = "me.tatarka.inject:kotlin-inject-runtime", version.ref = "kotlin-inject" }
+kotlin-inject-compiler = { module = "me.tatarka.inject:kotlin-inject-compiler-ksp", version.ref = "kotlin-inject" }
+anvil-runtime = { module = "software.amazon.lastmile.kotlin.inject.anvil:runtime", version.ref = "anvil" }
+anvil-compiler = { module = "software.amazon.lastmile.kotlin.inject.anvil:compiler", version.ref = "anvil" }
+
+leakcanary = { module = "com.squareup.leakcanary:leakcanary-android", version.ref = "leakcanary" }
+leakcanary-watcher = { module = "com.squareup.leakcanary:leakcanary-object-watcher-android", version.ref = "leakcanary" }
+
+compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }
+compose-ui-util = { module = "androidx.compose.ui:ui-util", version.ref = "compose" }
+compose-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "compose" }
+compose-runtime = { module = "androidx.compose.runtime:runtime", version.ref = "compose" }
+compose-graphics = { module = "androidx.compose.animation:animation-graphics", version.ref = "compose" }
+compose-material3 = { group = "androidx.compose.material3", name = "material3-android", version.ref = "material3" }
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
+
+# Decompose
+decompose-core = { module = "com.arkivanov.decompose:decompose", version.ref = "decompose" }
+decompose-compose-ext = { module = "com.arkivanov.decompose:extensions-compose", version.ref = "decompose" }
+essenty-lifecycle = { module = "com.arkivanov.essenty:lifecycle", version.ref = "essenty" }
+essenty-state-keeper = { group = "com.arkivanov.essenty", name = "state-keeper", version.ref = "essenty" }
+essenty-instance-keeper = { group = "com.arkivanov.essenty", name = "instance-keeper", version.ref = "essenty" }
+essenty-back-handler = { group = "com.arkivanov.essenty", name = "back-handler", version.ref = "essenty" }
+
+ktlint-cli = { module = "com.pinterest:ktlint", version.ref = "ktlint" }
+detekt-rules-compose = { module = "ru.kode:detekt-rules-compose", version.ref = "detekt-rules-compose" }
+
+compose-compiler-plugin = { module = "org.jetbrains.kotlin:compose-compiler-gradle-plugin", version.ref = "kotlin" }
+detekt-plugin = { module = "io.gitlab.arturbosch.detekt:detekt-gradle-plugin", version.ref = "detekt" }
+cachefix-plugin = { module = "org.gradle.android.cache-fix:org.gradle.android.cache-fix.gradle.plugin", version.ref = "cachefix" }
+ksp-plugin = { module = "com.google.devtools.ksp:com.google.devtools.ksp.gradle.plugin", version.ref = "ksp" }
+
+[bundles]
+core = [
+    "kotlin-coroutines-core",
+    "kotlin-coroutines-android",
+    "kotlin-datetime",
+]
+
+android = [
+    "androidx-core",
+    "androidx-core-ktx",
+    "androidx-annotation"
+]
+
+ui = [
+    "compose-ui",
+    "compose-ui-util",
+    "compose-tooling",
+    "compose-runtime",
+    "compose-graphics",
+    "compose-material3",
+    "coil-compose",
+]
+
+decompose = [
+    "decompose-core",
+    "decompose-compose-ext",
+    "essenty-lifecycle",
+    "essenty-state-keeper",
+    "essenty-instance-keeper",
+    "essenty-back-handler"
+]
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+cachefix = { id = "org.gradle.android.cache-fix", version.ref = "cachefix" }
+kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }

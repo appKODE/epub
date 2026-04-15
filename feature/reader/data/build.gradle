@@ -1,0 +1,30 @@
+plugins {
+  id 'android-library-convention'
+  id 'di-convention'
+  alias(libs.plugins.sqldelight)
+  alias(libs.plugins.kotlinx.serialization)
+}
+
+sqldelight {
+    databases {
+      BooksDatabase {
+            packageName = "ru.kode.epub.feature.reader.data"
+            srcDirs "src/main/db-reader"
+            schemaOutputDirectory = file("src/main/db-reader/migrations/")
+            verifyMigrations = true
+        }
+    }
+}
+
+dependencies {
+  api project(":core:data")
+  api project(":feature:reader:domain")
+
+  implementation libs.sqldelight.coroutines
+  implementation libs.sqldelight.runtime
+  implementation libs.sqldelight.android.driver
+}
+
+android {
+    namespace 'ru.kode.epub.feature.reader.data'
+}

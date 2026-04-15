@@ -1,0 +1,14 @@
+plugins {
+  id 'android-library-convention'
+  id 'compose-convention'
+  id 'di-convention'
+}
+
+dependencies {
+  implementation project(":core:uikit")
+  implementation project(":feature:reader:domain")
+}
+
+android {
+    namespace 'ru.kode.epub.feature.reader.ui'
+}

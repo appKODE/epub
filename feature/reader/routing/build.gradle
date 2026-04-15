@@ -1,0 +1,16 @@
+plugins {
+  id 'android-library-convention'
+  id 'compose-convention'
+  id 'di-convention'
+}
+
+dependencies {
+  api project(":core:routing")
+  api project(":feature:reader:data")
+  api project(":feature:reader:domain")
+  api project(":feature:reader:ui")
+}
+
+android {
+    namespace 'ru.kode.epub.feature.reader.routing'
+}

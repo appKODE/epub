@@ -1,0 +1,11 @@
+plugins {
+  id 'com.google.devtools.ksp'
+}
+
+dependencies {
+  api libs.kotlin.inject.runtime
+  api libs.anvil.runtime
+
+  ksp libs.kotlin.inject.compiler
+  ksp libs.anvil.compiler
+}

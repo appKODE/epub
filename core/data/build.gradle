@@ -1,0 +1,13 @@
+plugins {
+  id 'android-library-convention'
+  id 'di-convention'
+}
+
+android {
+  namespace = 'ru.kode.epub.core.data'
+}
+
+dependencies {
+  api project(':core:domain')
+  api libs.sqldelight.coroutines
+}
