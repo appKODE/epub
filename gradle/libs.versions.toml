@@ -15,6 +15,7 @@ anvil = "0.1.6"
 
 sqldelight = "2.3.2"
 
+jsoup = "1.18.3"
 timber = "5.0.1"
 leakcanary = "2.14"
 
@@ -47,6 +48,7 @@ sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", ver
 sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions-jvm", version.ref = "sqldelight" }
 sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
 
+jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 
 kotlin-inject-runtime = { module = "me.tatarka.inject:kotlin-inject-runtime", version.ref = "kotlin-inject" }
