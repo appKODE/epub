@@ -7,9 +7,9 @@ CREATE TABLE Book (
   uri TEXT NOT NULL,
   cover TEXT,
   updatedAt INTEGER AS Instant NOT NULL,
-  lastChapter INTEGER,
-  lastTag INTEGER,
-  chapters INTEGER
+  positionKey TEXT,
+  totalElements INTEGER,
+  totalChapters INTEGER
 );
 
 insertOrReplace:
@@ -17,15 +17,20 @@ INSERT OR REPLACE INTO Book
 VALUES ?;
 
 select:
-SELECT id, name, author, uri, cover, updatedAt, lastChapter, lastTag, chapters FROM Book
+SELECT id, name, author, uri, cover, updatedAt, positionKey, totalElements, totalChapters FROM Book
 WHERE id = ?;
 
 selectAll:
-SELECT id, name, author, uri, cover, updatedAt, lastChapter, lastTag, chapters FROM Book
+SELECT id, name, author, uri, cover, updatedAt, positionKey, totalElements, totalChapters FROM Book
 ORDER BY updatedAt DESC;
 
 delete:
 DELETE FROM Book WHERE id = ?;
+
+updateLastKey:
+UPDATE Book
+SET positionKey = ?
+WHERE id = ?;
 
 deleteOldest:
 DELETE FROM Book

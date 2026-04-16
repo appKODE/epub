@@ -47,6 +47,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -59,7 +60,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import ru.kode.epub.core.domain.mapDistinctNotNullChanges
 import ru.kode.epub.core.domain.entity.ScreenOrientation
 import ru.kode.epub.core.ui.compose.LocalScreenOrientation
 import ru.kode.epub.core.ui.screen.AppScreen
@@ -73,6 +79,7 @@ import kotlin.math.roundToInt
 
 private val ColumnGap = 32.dp
 
+@Suppress("CyclomaticComplexMethod")
 @Composable
 fun ReaderScreen(
   viewModel: ReaderViewModel
@@ -218,6 +225,18 @@ fun ReaderScreen(
         }
       }
 
+      LaunchedEffect(Unit) {
+        snapshotFlow { pagerState.layoutInfo }
+          .mapDistinctNotNullChanges { info ->
+            info.visiblePagesInfo.firstOrNull()?.index?.let { idx ->
+              calculatorPages[idx].firstOrNull()?.key
+            }
+          }
+          .flowOn(Dispatchers.Default)
+          .onEach(viewModel::onScroll)
+          .launchIn(viewModel.viewModelScope)
+      }
+
       AnimatedVisibility(
         visible = state.isTopBarVisible,
         enter = slideInVertically { -it },
@@ -288,7 +307,9 @@ fun ReaderScreen(
         // In 2-column mode two chapters can appear on the same screen — show the last one
         val currentChapterTitle = tocAnchorPages
           .lastOrNull { (_, pageIndex) -> pageIndex <= currentPage }
-          ?.first?.entry?.title
+          ?.first
+          ?.entry
+          ?.title
           .orEmpty()
         val chapterFractions = remember(tocAnchorPages, screenPageCount) {
           if (screenPageCount <= 1) emptyList()
@@ -317,6 +338,7 @@ fun ReaderScreen(
   }
 }
 
+@Suppress("ComposableEventParameterNaming")
 @Composable
 private fun ReadingBottomBar(
   currentPage: Int,

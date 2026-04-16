@@ -108,6 +108,12 @@ class ReaderDataRepository @Inject constructor(
     }
   }
 
+  override suspend fun updateBookPosition(id: String, positionKey: String) {
+    withContext(Dispatchers.IO) {
+      booksDatabase.bookQueries.updateLastKey(positionKey, id)
+    }
+  }
+
   private fun removeBookFiles(book: StorageBook) {
     runCatching {
       File(book.uri.toUri().path).delete()

@@ -9,6 +9,8 @@ interface ReaderRepository {
   val books: Flow<List<Book>>
   val settings: Flow<List<ReaderSettings>>
 
+  suspend fun updateBookPosition(id: String, positionKey: String)
+
   suspend fun store(uri: Uri): Book
   suspend fun remove(id: String)
   suspend fun clear()

@@ -7,10 +7,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -28,7 +26,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImagePainter
 import coil3.compose.rememberAsyncImagePainter
@@ -36,16 +33,11 @@ import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.request.error
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
-import ru.kode.epub.core.domain.randomUuid
 import ru.kode.epub.core.uikit.R
 import ru.kode.epub.core.uikit.component.VSpacer
-import ru.kode.epub.core.uikit.component.preview.PreviewColumn
 import ru.kode.epub.core.uikit.modifier.shimmer
 import ru.kode.epub.core.uikit.theme.AppTheme
 import ru.kode.epub.feature.reader.domain.entity.Book
-import kotlin.time.Clock
 
 @Composable
 fun BookGridItem(
@@ -126,32 +118,5 @@ fun BookGridItem(
         tint = AppTheme.colors.iconNegative
       )
     }
-  }
-}
-
-@Preview
-@Composable
-private fun BookGridItemPreview() {
-  PreviewColumn(backgroundColor = Color.Black) {
-    BookGridItem(
-      modifier = Modifier
-        .width(200.dp)
-        .heightIn(min = 300.dp),
-      book = Book(
-        id = randomUuid(),
-        name = "Long book title",
-        author = "Some Authorson",
-        uri = android.net.Uri.parse(randomUuid()),
-        cover = null,
-        updatedAt = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()),
-        progress = Book.Progress(
-          chapter = 50L,
-          tag = 1L
-        ),
-        totalChapters = 100L
-      ),
-      onClick = { },
-      onRemoveClick = { }
-    )
   }
 }

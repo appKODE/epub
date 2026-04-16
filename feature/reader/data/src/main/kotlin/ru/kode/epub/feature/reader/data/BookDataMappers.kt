@@ -3,7 +3,9 @@ package ru.kode.epub.feature.reader.data
 import android.net.Uri
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import ru.kode.epub.feature.reader.domain.entity.PositionKey
 import ru.kode.epub.feature.reader.domain.entity.ReaderSettings
+import ru.kode.epub.feature.reader.domain.entity.toPositionKey
 import ru.kode.epub.lib.entity.EpubBook
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -20,12 +22,12 @@ internal fun createBook(
     id = id,
     uri = uri,
     name = epub.title,
+    cover = cover,
     author = epub.author,
     updatedAt = Clock.System.now(),
-    lastChapter = null,
-    lastTag = null,
-    chapters = null,
-    cover = cover
+    positionKey = null,
+    totalElements = epub.chapters.sumOf { it.elements.size }.toLong(),
+    totalChapters = epub.chapters.size.toLong()
   )
 }
 
@@ -37,9 +39,9 @@ internal fun DataBook.toDomainModel(): DomainBook {
     uri = uri,
     cover = cover,
     updatedAt = updatedAt,
-    lastChapter = lastChapter,
-    lastTag = lastTag,
-    chapters = chapters
+    positionKey = positionKey,
+    totalElements = totalElements,
+    totalChapters = totalChapters
   )
 }
 
@@ -50,9 +52,9 @@ internal fun domainBookMapper(
   uri: String,
   cover: String?,
   updatedAt: Instant,
-  lastChapter: Long?,
-  lastTag: Long?,
-  chapters: Long?
+  positionKey: String?,
+  totalElements: Long?,
+  totalChapters: Long?
 ): DomainBook {
   return DomainBook(
     id = id,
@@ -62,10 +64,10 @@ internal fun domainBookMapper(
     cover = cover?.let(Uri::parse),
     updatedAt = updatedAt.toLocalDateTime(TimeZone.currentSystemDefault()),
     progress = DomainBook.Progress(
-      chapter = lastChapter ?: 0L,
-      tag = lastTag ?: 0L
-    ),
-    totalChapters = chapters ?: 0L
+      positionKey = positionKey?.toPositionKey() ?: PositionKey(),
+      totalChapters = totalChapters ?: 0L,
+      totalElements = totalElements ?: 0L
+    )
   )
 }
 

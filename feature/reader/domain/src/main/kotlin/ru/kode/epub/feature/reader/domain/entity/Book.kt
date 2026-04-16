@@ -12,14 +12,14 @@ data class Book(
   val uri: Uri,
   val cover: Uri? = null,
   val updatedAt: LocalDateTime,
-  val progress: Progress = Progress(),
-  val totalChapters: Long = 0L
+  val progress: Progress = Progress()
 ) {
   @Immutable
   data class Progress(
-    val chapter: Long = 0L,
-    val tag: Long = 0L
+    val positionKey: PositionKey = PositionKey(),
+    val totalChapters: Long = 0L,
+    val totalElements: Long = 0L
   )
 
-  val readProgress: Float = progress.chapter / totalChapters.toFloat()
+  val readProgress: Float = progress.positionKey.elementIdx / progress.totalElements.toFloat()
 }

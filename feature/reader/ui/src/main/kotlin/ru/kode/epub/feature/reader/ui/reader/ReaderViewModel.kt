@@ -28,9 +28,10 @@ class ReaderViewModel @Inject constructor(
   override fun initialState() = ViewState()
 
   override fun onStart() {
+    val elements = epub.flattenElements()
     stateFlow.update {
       it.copy(
-        elements = epub.flattenElements(),
+        elements = elements,
         toc = epub.toc,
         tocAnchors = epub.buildTocAnchors(),
         bookInfo = BookInfo(
@@ -41,7 +42,8 @@ class ReaderViewModel @Inject constructor(
           language = epub.language,
           description = epub.description
         ),
-        fontFiles = epub.fontFiles
+        fontFiles = epub.fontFiles,
+        scrollToElementIndex = book.progress.positionKey.elementIdx.toInt()
       )
     }
 
@@ -93,6 +95,11 @@ class ReaderViewModel @Inject constructor(
     stateFlow.update { it.copy(currentElementIndex = elementIndex) }
   }
 
+  fun onScroll(key: Any) {
+    epub.flattenElements()
+    model.updateBookPosition(book.id, key.toString())
+  }
+
   private fun selectTocEntry(entry: TocEntry) {
     val baseIndex = epub.chapters.take(entry.chapterIndex).sumOf { it.elements.size }
     val anchorOffset = entry.anchorId
@@ -134,13 +141,13 @@ class ReaderViewModel @Inject constructor(
 
     val result = mutableListOf<IndexedElement>()
     chapters.forEachIndexed { chapterIdx, chapter ->
-      chapter.elements.forEachIndexed { elemIdx, element ->
+      chapter.elements.forEachIndexed { relativeIdx, element ->
         val globalIndex = result.size
         result.add(
           IndexedElement(
-            key = "$chapterIdx-$elemIdx",
+            key = "$chapterIdx-$relativeIdx-$globalIndex",
             index = globalIndex,
-            isChapterStart = elemIdx == 0 || globalIndex in tocAnchorIndices,
+            isChapterStart = relativeIdx == 0 || globalIndex in tocAnchorIndices,
             element = element
           )
         )

@@ -75,7 +75,7 @@ private sealed interface SplitTextResult {
 }
 
 // ─────────────────────────── Core algorithm ─────────────────────────────────
-
+@Suppress("NestedBlockDepth")
 private fun buildPages(
   elements: List<IndexedElement>,
   pageHeightPx: Int,
