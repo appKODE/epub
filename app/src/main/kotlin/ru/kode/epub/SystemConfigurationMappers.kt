@@ -22,6 +22,14 @@ fun Configuration.toSystemConfiguration(
   )
 }
 
+fun Configuration.toScreenOrientation(): ScreenOrientation {
+  return if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
+    ScreenOrientation.Landscape
+  } else {
+    ScreenOrientation.Portrait
+  }
+}
+
 fun Display.getScreenRotation(): ScreenOrientation {
   return when (rotation) {
     Surface.ROTATION_90 -> ScreenOrientation.Landscape
