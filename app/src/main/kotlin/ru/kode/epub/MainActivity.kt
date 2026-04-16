@@ -2,6 +2,7 @@ package ru.kode.epub
 
 import android.content.Intent
 import android.content.res.Configuration
+import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -24,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.zIndex
-import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.WindowCompat
 import coil3.ImageLoader
 import coil3.compose.setSingletonImageLoaderFactory
@@ -78,9 +78,10 @@ open class MainActivity : ComponentActivity() {
 
       val orientation by systemConfigModel.screenOrientation.collectAsState(initialOrientation)
 
-      WindowBackgroundEffect()
       setSingletonImageLoaderFactory { context -> ImageLoader.Builder(context).crossfade(true).build() }
+
       AppTheme(useDarkTheme = isDark) {
+        WindowBackgroundEffect(color = AppTheme.colors.surfaceBackground)
         CompositionLocalProvider(
           LocalScreenOrientation provides orientation,
           LocalViewEventsHostMediator provides viewEventsMediator
@@ -93,6 +94,7 @@ open class MainActivity : ComponentActivity() {
                   params = uri?.let(ReaderFlowParams::Book) ?: ReaderFlowParams.Recent,
                   component = foregroundComponent.readerFactory().create(),
                   context = DefaultFlowComponentContext(context),
+                  viewEventsHostMediator = viewEventsMediator,
                   onFinish = ::finish
                 )
               }
@@ -142,9 +144,9 @@ open class MainActivity : ComponentActivity() {
   }
 
   @Composable
-  private fun WindowBackgroundEffect() {
-    LaunchedEffect(Unit) {
-      window.setBackgroundDrawable(Color.Transparent.toArgb().toDrawable())
+  private fun WindowBackgroundEffect(color: Color) {
+    LaunchedEffect(color) {
+      window.setBackgroundDrawable(ColorDrawable(color.toArgb()))
     }
   }
 

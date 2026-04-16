@@ -73,7 +73,7 @@ fun MainBottomAppBar(
       ScreenOrientation.Portrait -> {
         Box(
           modifier = Modifier
-            .background(color = AppTheme.colors.surfaceBackground)
+            .background(color = AppTheme.colors.surfaceLayer1)
             .navigationBarsPadding()
         ) {
           HorizontalBottomAppBar(

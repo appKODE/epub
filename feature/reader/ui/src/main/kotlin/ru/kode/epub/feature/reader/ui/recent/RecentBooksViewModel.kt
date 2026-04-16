@@ -13,9 +13,13 @@ import kotlinx.coroutines.flow.update
 import me.tatarka.inject.annotations.Inject
 import ru.kode.epub.core.domain.di.AppScope
 import ru.kode.epub.core.domain.di.SingleIn
+import ru.kode.epub.core.domain.entity.resRef
 import ru.kode.epub.core.ui.screen.ViewModel
+import ru.kode.epub.core.uikit.component.Dialog
+import ru.kode.epub.core.uikit.component.Snackbar
 import ru.kode.epub.feature.reader.domain.ReaderModel
 import ru.kode.epub.feature.reader.domain.entity.Book
+import ru.kode.epub.feature.reader.ui.R
 
 @Stable
 class RecentBooksViewModel @Inject constructor(
@@ -27,7 +31,11 @@ class RecentBooksViewModel @Inject constructor(
 
   override fun onStart() {
     model.books
-      .onEach { books -> stateFlow.update { it.copy(books = books) } }
+      .onEach { books -> stateFlow.update { it.copy(books = books, loading = false) } }
+      .launchIn(viewModelScope)
+
+    model.bookRemovedEvents
+      .onEach { sendViewEvent(Snackbar(resRef(R.string.book_removed_message))) }
       .launchIn(viewModelScope)
 
     launcher.results
@@ -37,6 +45,19 @@ class RecentBooksViewModel @Inject constructor(
 
   fun openBook(book: Book) {
     emitResult(RecentBooksResult.Reader(book))
+  }
+
+  fun removeBook(book: Book) {
+    sendViewEvent(
+      Dialog.Confirm(
+        title = resRef(R.string.remove_book_title),
+        text = resRef(R.string.remove_book_description),
+        useConfirmNegative = true,
+        confirmButtonText = resRef(R.string.remove_book_action),
+        dismissButtonText = resRef(R.string.remove_book_cancel),
+        onConfirm = { model.removeBook(book.id) }
+      )
+    )
   }
 
   fun addBook() {

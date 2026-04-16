@@ -65,5 +65,7 @@ data class AppColors(
   val iconAccentDisabled: Color,
   val iconNegativeDisabled: Color,
   val iconOnAccentDisabled: Color,
-  val iconOnNegativeDisabled: Color
+  val iconOnNegativeDisabled: Color,
+  val gradientSkeleton: List<Color>,
+  val gradientLinearSmall: List<Color>
 )

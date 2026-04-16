@@ -116,7 +116,7 @@ private fun BottomBarTab(
   )
   val titleColor by animateColorAsState(
     targetValue = if (isActive) {
-      AppTheme.colors.textPrimary
+      AppTheme.colors.textAccent
     } else {
       AppTheme.colors.iconTertiary
     },

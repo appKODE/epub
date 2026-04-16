@@ -1,10 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="reader_recent_tab">Recent books</string>
+    <string name="reader_recent_tab">Books</string>
     <string name="reader_settings_tab">Settings</string>
     <string name="settings_screen_title">Settings</string>
     <string name="settings_theme">Reader theme</string>
     <string name="settings_theme_light">Light theme</string>
     <string name="settings_theme_dark">Dark theme</string>
     <string name="settings_theme_system">System theme</string>
+    <string name="settings_clear_storage">Remove all books</string>
+    <string name="remove_book_action">Remove</string>
+    <string name="remove_book_cancel">Cancel</string>
+    <string name="remove_book_title">Remove book?</string>
+    <string name="remove_all_books_title">Remove all books?</string>
+    <string name="remove_book_description">The reading progress will be lost. This can not be undone</string>
+    <string name="books_stub_title">You do not have any books yet</string>
+    <string name="books_stub_description">Add one by clicking + button</string>
+    <string name="book_removed_message">A book removed successfully</string>
+    <string name="all_books_removed_message">All books removed successfully</string>
+    <string name="book_import_success">Book was imported successfully</string>
+    <string name="book_import_error_format">Book import error: incorrect format</string>
+    <string name="book_import_error_io">Book import error: file system error</string>
+    <string name="book_import_error_unknown">Something had gone wrong</string>
 </resources>

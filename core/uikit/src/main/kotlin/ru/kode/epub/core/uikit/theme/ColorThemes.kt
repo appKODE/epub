@@ -1,5 +1,7 @@
 package ru.kode.epub.core.uikit.theme
 
+import kotlin.collections.copy
+
 internal val LightAppColors = AppColors(
   isLight = true,
   surfaceBackground = ColorPalette.Blue100,
@@ -61,7 +63,13 @@ internal val LightAppColors = AppColors(
   iconAccentDisabled = ColorPalette.Blue700.copy(alpha = 0.6f),
   iconNegativeDisabled = ColorPalette.Red500.copy(alpha = 0.6f),
   iconOnAccentDisabled = ColorPalette.Blue300.copy(alpha = 0.6f),
-  iconOnNegativeDisabled = ColorPalette.Red50.copy(alpha = 0.6f)
+  iconOnNegativeDisabled = ColorPalette.Red50.copy(alpha = 0.6f),
+  gradientSkeleton = listOf(ColorPalette.Neutral250, ColorPalette.Neutral100),
+  gradientLinearSmall = listOf(
+    ColorPalette.Neutral900.copy(alpha = 0f),
+    ColorPalette.Neutral900.copy(alpha = 0.52f),
+    ColorPalette.Neutral900.copy(alpha = 0.7f)
+  )
 )
 
 internal val DarkAppColors = AppColors(
@@ -125,5 +133,11 @@ internal val DarkAppColors = AppColors(
   iconAccentDisabled = ColorPalette.Blue400.copy(alpha = 0.6f),
   iconNegativeDisabled = ColorPalette.Red200.copy(alpha = 0.6f),
   iconOnAccentDisabled = ColorPalette.Blue900.copy(alpha = 0.6f),
-  iconOnNegativeDisabled = ColorPalette.Red900.copy(alpha = 0.6f)
+  iconOnNegativeDisabled = ColorPalette.Red900.copy(alpha = 0.6f),
+  gradientSkeleton = listOf(ColorPalette.Neutral500, ColorPalette.Neutral550),
+  gradientLinearSmall = listOf(
+    ColorPalette.Neutral900.copy(alpha = 0f),
+    ColorPalette.Neutral900.copy(alpha = 0.52f),
+    ColorPalette.Neutral900.copy(alpha = 0.7f)
+  )
 )

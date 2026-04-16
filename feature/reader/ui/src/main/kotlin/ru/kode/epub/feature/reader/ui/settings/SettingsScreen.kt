@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -22,6 +23,8 @@ import ru.kode.epub.core.ui.compose.modifiers.surface
 import ru.kode.epub.core.ui.compose.resolveRef
 import ru.kode.epub.core.ui.screen.AppScreen
 import ru.kode.epub.core.uikit.component.DropdownField
+import ru.kode.epub.core.uikit.component.NegativeButton
+import ru.kode.epub.core.uikit.component.Text
 import ru.kode.epub.core.uikit.component.TopAppBar
 import ru.kode.epub.core.uikit.compose.itemsIndexedWithShape
 import ru.kode.epub.core.uikit.theme.AppTheme
@@ -47,7 +50,8 @@ fun SettingsScreen(
     LazyColumn(
       modifier = Modifier
         .fillMaxWidth(),
-      contentPadding = PaddingValues(16.dp)
+      contentPadding = PaddingValues(16.dp),
+      horizontalAlignment = Alignment.CenterHorizontally
     ) {
       state.settings.forEach { settings ->
         when (settings.selected) {
@@ -63,6 +67,11 @@ fun SettingsScreen(
           )
 
           else -> Unit
+        }
+      }
+      item {
+        NegativeButton(onClick = viewModel::clearStorage) {
+          Text(text = stringResource(R.string.settings_clear_storage))
         }
       }
     }

@@ -482,3 +482,7 @@ fun Scheduler.observeStateChanges(handle: TaskHandle<*, *>): Flow<JobState> {
 inline fun <reified R> Scheduler.successResults(handle: TaskHandle<*, R>): Flow<R> {
   return observeStateChanges(handle).mapNotNull { it.result as? R }
 }
+
+inline fun Scheduler.errors(handle: TaskHandle<*, *>): Flow<Throwable> {
+  return observeStateChanges(handle).mapNotNull { it.error }
+}

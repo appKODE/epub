@@ -6,9 +6,12 @@ import ru.kode.epub.feature.reader.domain.entity.Book
 import ru.kode.epub.feature.reader.domain.entity.ReaderSettings
 
 interface ReaderRepository {
-  suspend fun store(uri: Uri): Book
   val books: Flow<List<Book>>
-
   val settings: Flow<List<ReaderSettings>>
+
+  suspend fun store(uri: Uri): Book
+  suspend fun remove(id: String)
+  suspend fun clear()
+
   suspend fun update(settings: ReaderSettings)
 }

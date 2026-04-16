@@ -3,6 +3,7 @@ import kotlin.time.Instant;
 CREATE TABLE Book (
   id TEXT NOT NULL PRIMARY KEY,
   name TEXT NOT NULL,
+  author TEXT NOT NULL,
   uri TEXT NOT NULL,
   cover TEXT,
   updatedAt INTEGER AS Instant NOT NULL,
@@ -15,8 +16,12 @@ insertOrReplace:
 INSERT OR REPLACE INTO Book
 VALUES ?;
 
+select:
+SELECT id, name, author, uri, cover, updatedAt, lastChapter, lastTag, chapters FROM Book
+WHERE id = ?;
+
 selectAll:
-SELECT id, name, uri, cover, updatedAt, lastChapter, lastTag, chapters FROM Book
+SELECT id, name, author, uri, cover, updatedAt, lastChapter, lastTag, chapters FROM Book
 ORDER BY updatedAt DESC;
 
 delete:

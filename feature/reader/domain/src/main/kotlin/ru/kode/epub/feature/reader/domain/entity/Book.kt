@@ -8,16 +8,17 @@ import kotlinx.datetime.LocalDateTime
 data class Book(
   val id: String,
   val name: String,
+  val author: String,
   val uri: Uri,
-  val cover: Uri?,
+  val cover: Uri? = null,
   val updatedAt: LocalDateTime,
-  val progress: Progress,
-  val totalChapters: Long
+  val progress: Progress = Progress(),
+  val totalChapters: Long = 0L
 ) {
   @Immutable
   data class Progress(
-    val chapter: Long,
-    val tag: Long
+    val chapter: Long = 0L,
+    val tag: Long = 0L
   )
 
   val readProgress: Float = progress.chapter / totalChapters.toFloat()

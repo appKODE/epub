@@ -1,11 +1,17 @@
 package ru.kode.epub.feature.reader.routing
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.stack.animation.slide
@@ -13,6 +19,7 @@ import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import ru.kode.epub.core.domain.entity.ScreenOrientation
 import ru.kode.epub.core.ui.compose.LocalScreenOrientation
 import ru.kode.epub.core.ui.flow.LocalDecomposeBackHandler
+import ru.kode.epub.core.uikit.component.CircularLoaderWithOverlay
 import ru.kode.epub.feature.reader.routing.ReaderNavigationComponent.Child
 import ru.kode.epub.feature.reader.ui.bottombar.BottomBarController
 import ru.kode.epub.feature.reader.ui.bottombar.LocalBottomBarController
@@ -43,6 +50,14 @@ fun ReaderFlow(
         }
       )
     }
+  }
+  val importInProgress by component.epubImportInProgress.collectAsState(false)
+  AnimatedVisibility(
+    visible = importInProgress,
+    enter = fadeIn(),
+    exit = fadeOut()
+  ) {
+    CircularLoaderWithOverlay(modifier = Modifier.fillMaxSize())
   }
 }
 

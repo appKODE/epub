@@ -2,6 +2,7 @@ package ru.kode.epub.feature.reader.data
 
 import android.content.Context
 import android.net.Uri
+import androidx.core.net.toUri
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import kotlinx.coroutines.Dispatchers
@@ -20,9 +21,13 @@ import ru.kode.epub.feature.reader.domain.entity.FileError.NotAvailable
 import ru.kode.epub.feature.reader.domain.entity.FileError.NotFound
 import ru.kode.epub.feature.reader.domain.entity.ReaderSettings
 import ru.kode.epub.feature.reader.domain.entity.readerSettings
+import ru.kode.epub.lib.EpubParser
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
+import timber.log.Timber
 import java.io.File
 import java.io.FileNotFoundException
+import java.io.FileOutputStream
+import ru.kode.epub.feature.reader.data.Book as StorageBook
 
 @SingleIn(AppScope::class)
 @ContributesBinding(AppScope::class)
@@ -67,9 +72,50 @@ class ReaderDataRepository @Inject constructor(
     if (type != "application/epub+zip") throw IncorrectFormat
     val id = randomUuid()
     val file = uri.copyTo(id, storage)
-    val book = createBook(id = id, uri = Uri.fromFile(file).toString())
+    val copy = Uri.fromFile(file)
+    val epub = EpubParser.parse(context, copy)
+    val cover = epub.coverImage?.let { image ->
+      runCatching {
+        val file = File(context.storageDir, "$id.cover")
+        FileOutputStream(file).use { fos -> fos.write(image.data) }
+        file
+      }
+        .getOrNull()
+    }
+      ?.let(Uri::fromFile)
+    val book = createBook(epub = epub, id = id, uri = copy.toString(), cover = cover.toString())
     booksDatabase.bookQueries.insertOrReplace(book)
     book.toDomainModel()
+  }
+
+  override suspend fun remove(id: String) {
+    withContext(Dispatchers.IO) {
+      val book = booksDatabase.bookQueries.select(id).executeAsOneOrNull() ?: return@withContext
+      booksDatabase.bookQueries.delete(id)
+      removeBookFiles(book)
+    }
+  }
+
+  override suspend fun clear() {
+    withContext(Dispatchers.IO) {
+      val books = booksDatabase.bookQueries.selectAll().executeAsList()
+      booksDatabase.transaction {
+        for (book in books) {
+          booksDatabase.bookQueries.delete(book.id)
+          removeBookFiles(book)
+        }
+      }
+    }
+  }
+
+  private fun removeBookFiles(book: StorageBook) {
+    runCatching {
+      File(book.uri.toUri().path).delete()
+      if (book.cover != null) {
+        File(book.cover.toUri().path).delete()
+      }
+    }
+      .onFailure(Timber::e)
   }
 
   private suspend fun Uri.copyTo(id: String, dir: File): File {
