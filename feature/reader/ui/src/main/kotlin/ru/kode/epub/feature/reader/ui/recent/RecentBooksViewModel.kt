@@ -75,15 +75,15 @@ class AddBookLauncher @Inject constructor() {
   private val uris = MutableSharedFlow<Uri>(extraBufferCapacity = 3)
   val results = uris.asSharedFlow()
 
-  private lateinit var launcher: ActivityResultLauncher<String>
+  private lateinit var launcher: ActivityResultLauncher<Array<String>>
 
   fun register(activity: ComponentActivity) {
     launcher = activity.registerForActivityResult(
-      contract = ActivityResultContracts.GetContent()
+      contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? -> if (uri != null) uris.tryEmit(uri) }
   }
 
   fun launch() {
-    launcher.launch("*/*")
+    launcher.launch(arrayOf("application/epub+zip"))
   }
 }
