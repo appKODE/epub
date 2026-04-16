@@ -102,6 +102,23 @@ fun ReaderScreen(
         }
       }
 
+      // Restore position after config change: pagerState resets to 0, pages are recomputed
+      LaunchedEffect(pages) {
+        if (pages.isNotEmpty() && pagerState.currentPage == 0) {
+          state.currentElementIndex?.let { savedIndex ->
+            val pageIndex = pages.indexOfFirst { page -> page.any { it.index == savedIndex } }
+            if (pageIndex > 0) pagerState.scrollToPage(pageIndex)
+          }
+        }
+      }
+
+      // Save current position on every page change
+      LaunchedEffect(pagerState.currentPage) {
+        pages.getOrNull(pagerState.currentPage)?.firstOrNull()?.let {
+          viewModel.onCurrentPageChanged(it.index)
+        }
+      }
+
       if (state.scrollMode != null && pages.isNotEmpty()) {
         val pageContent: @Composable PagerScope.(pageIndex: Int) -> Unit = { pageIndex ->
           Column(

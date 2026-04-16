@@ -79,6 +79,10 @@ class ReaderViewModel @Inject constructor(
     stateFlow.update { it.copy(scrollToElementIndex = elementIndex) }
   }
 
+  fun onCurrentPageChanged(elementIndex: Int) {
+    stateFlow.update { it.copy(currentElementIndex = elementIndex) }
+  }
+
   private fun selectTocEntry(entry: TocEntry) {
     val baseIndex = epub.chapters.take(entry.chapterIndex).sumOf { it.elements.size }
     val anchorOffset = entry.anchorId

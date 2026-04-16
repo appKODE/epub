@@ -14,6 +14,7 @@ data class ViewState(
   val bookInfo: BookInfo = BookInfo(),
   val fontFiles: List<EpubFontFile> = emptyList(),
   val isTopBarVisible: Boolean = true,
+  val currentElementIndex: Int? = null,
   val scrollToElementIndex: Int? = null,
   val scrollMode: PageScrollMode? = null
 )
