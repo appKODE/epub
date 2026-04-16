@@ -11,14 +11,21 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerScope
@@ -46,18 +53,25 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import ru.kode.epub.core.domain.entity.ScreenOrientation
+import ru.kode.epub.core.ui.compose.LocalScreenOrientation
 import ru.kode.epub.core.ui.screen.AppScreen
 import ru.kode.epub.core.uikit.R
 import ru.kode.epub.core.uikit.theme.AppTheme
 import ru.kode.epub.core.uikit.touch.disableClickThrough
+import ru.kode.epub.feature.reader.domain.entity.ColumnMode
 import ru.kode.epub.feature.reader.domain.entity.PageScrollMode
 import ru.kode.epub.feature.reader.ui.bottombar.BottomBarStateRestoreEffect
 import kotlin.math.roundToInt
+
+private val ColumnGap = 32.dp
 
 @Composable
 fun ReaderScreen(
@@ -74,67 +88,91 @@ fun ReaderScreen(
         .background(AppTheme.colors.surfaceBackground)
     ) {
       val density = LocalDensity.current
+      val layoutDirection = LocalLayoutDirection.current
+      val orientation = LocalScreenOrientation.current
+
       val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp
       val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
       val bottomPadding = navBarPadding + 16.dp
 
+      val sideInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
+      val sideInsetPaddingValues = sideInsets.asPaddingValues()
+      val sideStart: Dp = sideInsetPaddingValues.calculateStartPadding(layoutDirection)
+      val sideEnd: Dp = sideInsetPaddingValues.calculateEndPadding(layoutDirection)
+      val sideHorizontalPx = with(density) { sideStart.roundToPx() + sideEnd.roundToPx() }
+
+      val columnCount = if (
+        state.columnMode == ColumnMode.Double && orientation == ScreenOrientation.Landscape
+      ) 2 else 1
+
       val horizontalPaddingPx = with(density) { 32.dp.roundToPx() }
+      val columnGapPx = with(density) { if (columnCount > 1) ColumnGap.roundToPx() else 0 }
       val contentHeightPx = with(density) {
         (constraints.maxHeight - statusBarPadding.roundToPx() - bottomPadding.roundToPx())
           .coerceAtLeast(0)
       }
-      val contentWidthPx = (constraints.maxWidth - horizontalPaddingPx).coerceAtLeast(0)
+      // Width available for all columns (subtract item padding and side system insets)
+      val totalContentWidthPx = (constraints.maxWidth - horizontalPaddingPx - sideHorizontalPx).coerceAtLeast(0)
+      val columnWidthPx = ((totalContentWidthPx - columnGapPx) / columnCount).coerceAtLeast(0)
 
-      val pages = rememberPageBreaks(
+      // Each calculator page = one column
+      val calculatorPages = rememberPageBreaks(
         elements = state.elements,
         contentHeightPx = contentHeightPx,
-        contentWidthPx = contentWidthPx
+        contentWidthPx = columnWidthPx
       )
 
-      val pagerState = rememberPagerState(pageCount = { pages.size.coerceAtLeast(1) })
+      val screenPageCount = (calculatorPages.size + columnCount - 1) / columnCount
+      val pagerState = rememberPagerState(pageCount = { screenPageCount.coerceAtLeast(1) })
       val coroutineScope = rememberCoroutineScope()
 
-      LaunchedEffect(state.scrollToElementIndex, pages) {
+      // TOC / chapter navigation scroll
+      LaunchedEffect(state.scrollToElementIndex, calculatorPages) {
         state.scrollToElementIndex?.let { targetIndex ->
-          val pageIndex = pages.indexOfFirst { page -> page.any { it.index == targetIndex } }
-          if (pageIndex >= 0) pagerState.scrollToPage(pageIndex)
+          val calcIdx = calculatorPages.indexOfFirst { page -> page.any { it.index == targetIndex } }
+          if (calcIdx >= 0) pagerState.scrollToPage(calcIdx / columnCount)
           viewModel.onScrollHandled()
         }
       }
 
-      // Restore position after config change: pagerState resets to 0, pages are recomputed
-      LaunchedEffect(pages) {
-        if (pages.isNotEmpty() && pagerState.currentPage == 0) {
+      // Restore position after config change (pagerState resets to 0)
+      LaunchedEffect(calculatorPages, columnCount) {
+        if (calculatorPages.isNotEmpty() && pagerState.currentPage == 0) {
           state.currentElementIndex?.let { savedIndex ->
-            val pageIndex = pages.indexOfFirst { page -> page.any { it.index == savedIndex } }
-            if (pageIndex > 0) pagerState.scrollToPage(pageIndex)
+            val calcIdx = calculatorPages.indexOfFirst { page -> page.any { it.index == savedIndex } }
+            if (calcIdx > 0) pagerState.scrollToPage(calcIdx / columnCount)
           }
         }
       }
 
-      // Save current position on every page change
-      LaunchedEffect(pagerState.currentPage) {
-        pages.getOrNull(pagerState.currentPage)?.firstOrNull()?.let {
+      // Save position on every page change
+      LaunchedEffect(pagerState.currentPage, columnCount) {
+        val calcIdx = pagerState.currentPage * columnCount
+        calculatorPages.getOrNull(calcIdx)?.firstOrNull()?.let {
           viewModel.onCurrentPageChanged(it.index)
         }
       }
 
-      if (state.scrollMode != null && pages.isNotEmpty()) {
-        val pageContent: @Composable PagerScope.(pageIndex: Int) -> Unit = { pageIndex ->
-          Column(
+      if (state.scrollMode != null && state.columnMode != null && calculatorPages.isNotEmpty()) {
+        val pageContent: @Composable PagerScope.(screenPageIndex: Int) -> Unit = { screenPageIndex ->
+          Row(
             modifier = Modifier
               .fillMaxSize()
               .pointerInput(state.scrollMode) {
                 detectTapGestures { offset ->
                   val targetPage = when (state.scrollMode) {
                     PageScrollMode.Horizontal -> when {
-                      offset.x < size.width * 0.2f -> (pagerState.currentPage - 1).takeIf { it >= 0 }
-                      offset.x > size.width * 0.8f -> (pagerState.currentPage + 1).takeIf { it < pagerState.pageCount }
+                      offset.x < size.width * 0.2f ->
+                        (pagerState.currentPage - 1).takeIf { it >= 0 }
+                      offset.x > size.width * 0.8f ->
+                        (pagerState.currentPage + 1).takeIf { it < pagerState.pageCount }
                       else -> null
                     }
                     PageScrollMode.Vertical -> when {
-                      offset.y < size.height * 0.2f -> (pagerState.currentPage - 1).takeIf { it >= 0 }
-                      offset.y > size.height * 0.8f -> (pagerState.currentPage + 1).takeIf { it < pagerState.pageCount }
+                      offset.y < size.height * 0.2f ->
+                        (pagerState.currentPage - 1).takeIf { it >= 0 }
+                      offset.y > size.height * 0.8f ->
+                        (pagerState.currentPage + 1).takeIf { it < pagerState.pageCount }
                       else -> null
                     }
                   }
@@ -145,10 +183,16 @@ fun ReaderScreen(
                   }
                 }
               }
-              .padding(top = statusBarPadding, bottom = bottomPadding)
+              .padding(top = statusBarPadding, bottom = bottomPadding, start = sideStart, end = sideEnd)
           ) {
-            pages[pageIndex].forEach { indexed ->
-              ContentItem(indexed.element)
+            repeat(columnCount) { colIdx ->
+              if (colIdx > 0) Spacer(Modifier.width(ColumnGap))
+              Column(modifier = Modifier.weight(1f)) {
+                val calcIdx = screenPageIndex * columnCount + colIdx
+                calculatorPages.getOrElse(calcIdx) { emptyList() }.forEach { indexed ->
+                  ContentItem(indexed.element)
+                }
+              }
             }
           }
         }
@@ -166,11 +210,11 @@ fun ReaderScreen(
         }
       }
 
-      // Precompute page index for each TOC anchor once pages are ready
-      val tocAnchorPages = remember(state.tocAnchors, pages) {
+      // Map each TOC anchor to its screen page index
+      val tocAnchorPages = remember(state.tocAnchors, calculatorPages, columnCount) {
         state.tocAnchors.mapNotNull { anchor ->
-          val pageIndex = pages.indexOfFirst { page -> page.any { it.index == anchor.elementIndex } }
-          if (pageIndex >= 0) anchor to pageIndex else null
+          val calcIdx = calculatorPages.indexOfFirst { page -> page.any { it.index == anchor.elementIndex } }
+          if (calcIdx >= 0) anchor to (calcIdx / columnCount) else null
         }
       }
 
@@ -228,12 +272,12 @@ fun ReaderScreen(
               )
             }
           },
-          windowInsets = WindowInsets.statusBars
+          windowInsets = WindowInsets.statusBars.union(sideInsets)
         )
       }
 
       AnimatedVisibility(
-        visible = state.isTopBarVisible && pages.isNotEmpty(),
+        visible = state.isTopBarVisible && calculatorPages.isNotEmpty(),
         enter = slideInVertically { it },
         exit = slideOutVertically { it },
         modifier = Modifier.align(Alignment.BottomCenter)
@@ -241,18 +285,19 @@ fun ReaderScreen(
         val currentPage = pagerState.currentPage
         val prevAnchor = tocAnchorPages.lastOrNull { (_, pageIndex) -> pageIndex < currentPage }
         val nextAnchor = tocAnchorPages.firstOrNull { (_, pageIndex) -> pageIndex > currentPage }
+        // In 2-column mode two chapters can appear on the same screen — show the last one
         val currentChapterTitle = tocAnchorPages
           .lastOrNull { (_, pageIndex) -> pageIndex <= currentPage }
           ?.first?.entry?.title
           .orEmpty()
-        val chapterFractions = remember(tocAnchorPages, pages.size) {
-          if (pages.size <= 1) emptyList()
-          else tocAnchorPages.map { (_, pageIndex) -> pageIndex.toFloat() / (pages.size - 1) }
+        val chapterFractions = remember(tocAnchorPages, screenPageCount) {
+          if (screenPageCount <= 1) emptyList()
+          else tocAnchorPages.map { (_, pageIndex) -> pageIndex.toFloat() / (screenPageCount - 1) }
         }
 
         ReadingBottomBar(
           currentPage = currentPage,
-          totalPages = pages.size,
+          totalPages = screenPageCount,
           chapterTitle = currentChapterTitle,
           chapterFractions = chapterFractions,
           prevChapterDist = prevAnchor?.let { (_, pageIndex) -> currentPage - pageIndex },
@@ -263,7 +308,9 @@ fun ReaderScreen(
           modifier = Modifier
             .fillMaxWidth()
             .background(AppTheme.colors.surfaceBackground)
-            .padding(bottom = navBarPadding)
+            .padding(bottom = navBarPadding),
+          sideStart = sideStart,
+          sideEnd = sideEnd
         )
       }
     }
@@ -281,12 +328,14 @@ private fun ReadingBottomBar(
   onPrevChapter: () -> Unit,
   onNextChapter: () -> Unit,
   onPageSelected: (Int) -> Unit,
-  modifier: Modifier = Modifier
+  modifier: Modifier = Modifier,
+  sideStart: Dp = 0.dp,
+  sideEnd: Dp = 0.dp
 ) {
   Column(
     modifier = modifier
       .disableClickThrough()
-      .padding(horizontal = 8.dp, vertical = 4.dp)
+      .padding(start = 8.dp + sideStart, end = 8.dp + sideEnd, top = 4.dp, bottom = 4.dp)
   ) {
     Row(
       verticalAlignment = Alignment.CenterVertically,
@@ -351,7 +400,6 @@ private fun ReadingBottomBar(
             .fillMaxWidth()
             .height(4.dp)
         ) {
-          // Uniform track — no active fill, no tick dots
           drawLine(
             color = trackColor,
             start = Offset(0f, size.height / 2),
@@ -359,7 +407,6 @@ private fun ReadingBottomBar(
             strokeWidth = size.height,
             cap = StrokeCap.Round
           )
-          // Vertical chapter marks
           for (fraction in chapterFractions) {
             val x = fraction * size.width
             drawLine(

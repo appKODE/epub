@@ -11,6 +11,7 @@ import me.tatarka.inject.annotations.Inject
 import ru.kode.epub.core.ui.screen.ViewModel
 import ru.kode.epub.feature.reader.domain.ReaderModel
 import ru.kode.epub.feature.reader.domain.entity.Book
+import ru.kode.epub.feature.reader.domain.entity.ColumnMode
 import ru.kode.epub.feature.reader.domain.entity.PageScrollMode
 import ru.kode.epub.lib.EpubParser
 import ru.kode.epub.lib.entity.EpubBook
@@ -50,6 +51,15 @@ class ReaderViewModel @Inject constructor(
       }
       .onEach { scrollMode ->
         stateFlow.update { it.copy(scrollMode = scrollMode) }
+      }
+      .launchIn(viewModelScope)
+
+    model.readerSettings
+      .mapNotNull { settings ->
+        settings.find { it.selected is ColumnMode }?.selected as? ColumnMode
+      }
+      .onEach { columnMode ->
+        stateFlow.update { it.copy(columnMode = columnMode) }
       }
       .launchIn(viewModelScope)
   }
