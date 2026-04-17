@@ -261,8 +261,16 @@ object EpubParser {
       val href = attrs.getNamedItem("href")?.nodeValue ?: continue
       val mediaType = attrs.getNamedItem("media-type")?.nodeValue ?: ""
       val properties = attrs.getNamedItem("properties")?.nodeValue ?: ""
+      val propList = properties.split(Regex("\\s+"))
       manifest[id] = ManifestItem(id, href, mediaType, properties)
-      if ("nav" in properties.split(Regex("\\s+"))) navDocId = id
+      if ("nav" in propList) navDocId = id
+      // EPUB3: cover image marked via properties="cover-image"
+      if ("cover-image" in propList) coverManifestId = id
+    }
+    // Fallback: manifest item with id="cover" and an image media-type (common convention)
+    if (coverManifestId == null) {
+      val coverItem = manifest["cover"]
+      if (coverItem != null && coverItem.mediaType.startsWith("image/")) coverManifestId = "cover"
     }
 
     // ── Spine ──
