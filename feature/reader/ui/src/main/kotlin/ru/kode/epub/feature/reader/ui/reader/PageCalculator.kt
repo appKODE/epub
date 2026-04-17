@@ -188,15 +188,20 @@ private fun trySplitElement(
         fontStyle = css.italic?.toFontStyle() ?: FontStyle.Normal,
         fontWeight = css.bold?.toFontWeight() ?: FontWeight.Normal
       )
+      val paddingStartPx = css.paddingStart.toDp(default = 16.dp).roundToPx()
+      val paddingEndPx = css.paddingEnd.toDp(default = 16.dp).roundToPx()
+      val paddingTopPx = css.paddingTop.toDp(default = 0.dp).roundToPx()
+      val paddingBottomPx = css.paddingBottom.toDp(default = 0.dp).roundToPx()
+      val textWidthPx = (contentWidthPx - paddingStartPx - paddingEndPx).coerceAtLeast(0)
       val marginTopPx = css.marginTop.toDp(default = 0.dp).roundToPx()
-      val marginBottomPx = css.marginBottom.toDp(default = 2.dp).roundToPx()
-      val textAvailable = availableHeightPx - marginTopPx - marginBottomPx
+      val marginBottomPx = css.marginBottom.toDp(default = PARAGRAPH_MARGIN_BOTTOM_DEFAULT).roundToPx()
+      val textAvailable = availableHeightPx - marginTopPx - marginBottomPx - paddingTopPx - paddingBottomPx
 
       when (
         val textResult = splitTextToHeight(
           text = element.text,
           style = style,
-          widthPx = contentWidthPx,
+          widthPx = textWidthPx,
           availableHeightPx = textAvailable,
           textMeasurer = textMeasurer
         )
@@ -223,9 +228,9 @@ private fun trySplitElement(
         lineHeight = 26.sp,
         fontStyle = css.italic?.toFontStyle() ?: FontStyle.Normal
       )
-      val marginTopPx = css.marginTop.toDp(default = 4.dp).roundToPx()
-      val marginBottomPx = css.marginBottom.toDp(default = 4.dp).roundToPx()
-      val marginStartPx = css.marginStart.toDp(default = 32.dp).roundToPx()
+      val marginTopPx = css.marginTop.toDp(default = QUOTE_MARGIN_TOP_DEFAULT).roundToPx()
+      val marginBottomPx = css.marginBottom.toDp(default = QUOTE_MARGIN_BOTTOM_DEFAULT).roundToPx()
+      val marginStartPx = css.marginStart.toDp(default = QUOTE_MARGIN_START_DEFAULT).roundToPx()
       val quoteWidthPx = (contentWidthPx - marginStartPx).coerceAtLeast(contentWidthPx / 2)
       val textAvailable = availableHeightPx - marginTopPx - marginBottomPx
 
@@ -289,8 +294,15 @@ private fun splitTextToHeight(
   val splitIndex = measured.getLineEnd(lastFittingLine, visibleEnd = true)
     .coerceIn(1, text.text.length - 1)
 
+  // Hyphens.Auto adds a hyphen visually at the line break but does not insert it into the text.
+  // When the first part is rendered alone the word is no longer broken, so no hyphen appears.
+  // Fix: if the split landed in the middle of a word, append an explicit hyphen.
+  val needsHyphen = text.text.getOrNull(splitIndex - 1)?.isLetter() == true &&
+    text.text.getOrNull(splitIndex)?.isLetter() == true
+
   val (first, second) = text.splitAt(splitIndex)
-  return SplitTextResult.Split(first, second)
+  val firstPart = if (needsHyphen) first.copy(text = first.text + "-") else first
+  return SplitTextResult.Split(firstPart, second)
 }
 
 // ─────────────────────────── Height measurement ─────────────────────────────
@@ -309,6 +321,7 @@ private fun measureElementHeight(
     is ContentElement.Heading -> {
       val css = element.styles
       val baseStyle = headlineStyles[element.level] ?: subheadStyle
+      val textWidthPx = (contentWidthPx - 2 * HEADING_HORIZONTAL_PADDING_DEFAULT.roundToPx()).coerceAtLeast(0)
       val measured = textMeasurer.measure(
         text = element.text.toAnnotatedString(),
         style = baseStyle.copy(
@@ -316,15 +329,20 @@ private fun measureElementHeight(
           fontWeight = css.bold?.toFontWeight() ?: baseStyle.fontWeight,
           fontStyle = css.italic?.toFontStyle() ?: baseStyle.fontStyle
         ),
-        constraints = Constraints.fixedWidth(contentWidthPx)
+        constraints = Constraints.fixedWidth(textWidthPx)
       )
       measured.size.height +
-        css.marginTop.toDp(default = 8.dp).roundToPx() +
-        css.marginBottom.toDp(default = 4.dp).roundToPx()
+        css.marginTop.toDp(default = HEADING_MARGIN_TOP_DEFAULT).roundToPx() +
+        css.marginBottom.toDp(default = HEADING_MARGIN_BOTTOM_DEFAULT).roundToPx()
     }
 
     is ContentElement.Paragraph -> {
       val css = element.styles
+      val paddingStartPx = css.paddingStart.toDp(default = 16.dp).roundToPx()
+      val paddingEndPx = css.paddingEnd.toDp(default = 16.dp).roundToPx()
+      val paddingTopPx = css.paddingTop.toDp(default = 0.dp).roundToPx()
+      val paddingBottomPx = css.paddingBottom.toDp(default = 0.dp).roundToPx()
+      val textWidthPx = (contentWidthPx - paddingStartPx - paddingEndPx).coerceAtLeast(0)
       val measured = textMeasurer.measure(
         text = element.text.toAnnotatedString(),
         style = bodyStyle.copy(
@@ -337,16 +355,19 @@ private fun measureElementHeight(
           fontStyle = css.italic?.toFontStyle() ?: FontStyle.Normal,
           fontWeight = css.bold?.toFontWeight() ?: FontWeight.Normal
         ),
-        constraints = Constraints.fixedWidth(contentWidthPx)
+        constraints = Constraints.fixedWidth(textWidthPx)
       )
-      measured.size.height +
+      val contentHeight = measured.size.height +
         css.marginTop.toDp(default = 0.dp).roundToPx() +
-        css.marginBottom.toDp(default = 2.dp).roundToPx()
+        css.marginBottom.toDp(default = PARAGRAPH_MARGIN_BOTTOM_DEFAULT).roundToPx() +
+        paddingTopPx + paddingBottomPx
+      val minHeightPx = css.minHeight.toDp(default = 0.dp).roundToPx()
+      maxOf(contentHeight, minHeightPx)
     }
 
     is ContentElement.Quote -> {
       val css = element.styles
-      val marginStartPx = css.marginStart.toDp(default = 32.dp).roundToPx()
+      val marginStartPx = css.marginStart.toDp(default = QUOTE_MARGIN_START_DEFAULT).roundToPx()
       val quoteWidthPx = (contentWidthPx - marginStartPx).coerceAtLeast(contentWidthPx / 2)
       val measured = textMeasurer.measure(
         text = element.text.toAnnotatedString(),
@@ -358,13 +379,13 @@ private fun measureElementHeight(
         constraints = Constraints.fixedWidth(quoteWidthPx)
       )
       measured.size.height +
-        css.marginTop.toDp(default = 4.dp).roundToPx() +
-        css.marginBottom.toDp(default = 4.dp).roundToPx()
+        css.marginTop.toDp(default = QUOTE_MARGIN_TOP_DEFAULT).roundToPx() +
+        css.marginBottom.toDp(default = QUOTE_MARGIN_BOTTOM_DEFAULT).roundToPx()
     }
 
     is ContentElement.EpubImage -> {
       val bitmap = BitmapFactory.decodeByteArray(element.data, 0, element.data.size)
-      val verticalPaddingPx = 16.dp.roundToPx()
+      val verticalPaddingPx = (IMAGE_VERTICAL_PADDING_DEFAULT * 2).roundToPx()
       if (bitmap != null) {
         val heightPx = bitmap.height.toFloat()
         val aspectRatio = bitmap.width.toFloat() / heightPx

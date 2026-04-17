@@ -49,6 +49,16 @@ import java.io.File
 
 val LocalEpubFontFamily = compositionLocalOf<FontFamily> { FontFamily.Default }
 
+// Default CSS spacing values — shared with PageCalculator.kt to keep measurement and rendering in sync
+internal val HEADING_MARGIN_TOP_DEFAULT = 16.dp
+internal val HEADING_MARGIN_BOTTOM_DEFAULT = 4.dp
+internal val PARAGRAPH_MARGIN_BOTTOM_DEFAULT = 2.dp
+internal val QUOTE_MARGIN_TOP_DEFAULT = 4.dp
+internal val QUOTE_MARGIN_BOTTOM_DEFAULT = 4.dp
+internal val QUOTE_MARGIN_START_DEFAULT = 32.dp
+internal val IMAGE_VERTICAL_PADDING_DEFAULT = 8.dp
+internal val HEADING_HORIZONTAL_PADDING_DEFAULT = 16.dp // each side, fixed
+
 @Composable
 fun rememberEpubFontFamily(fontFiles: List<EpubFontFile>): FontFamily {
   val context = LocalContext.current
@@ -180,8 +190,8 @@ private fun HeadingItem(heading: ContentElement.Heading) {
     modifier = Modifier
       .fillMaxWidth()
       .padding(
-        top = css.marginTop.toDp(default = 16.dp),
-        bottom = css.marginBottom.toDp(default = 4.dp)
+        top = css.marginTop.toDp(default = HEADING_MARGIN_TOP_DEFAULT),
+        bottom = css.marginBottom.toDp(default = HEADING_MARGIN_BOTTOM_DEFAULT)
       )
   ) {
     Text(
@@ -195,7 +205,7 @@ private fun HeadingItem(heading: ContentElement.Heading) {
       fontFamily = LocalEpubFontFamily.current,
       modifier = Modifier
         .fillMaxWidth()
-        .padding(horizontal = 16.dp)
+        .padding(horizontal = HEADING_HORIZONTAL_PADDING_DEFAULT)
     )
   }
 }
@@ -210,7 +220,7 @@ private fun ParagraphItem(paragraph: ContentElement.Paragraph) {
       .heightIn(min = css.minHeight.toDp(default = 0.dp))
       .padding(
         top = css.marginTop.toDp(default = 0.dp),
-        bottom = css.marginBottom.toDp(default = 2.dp)
+        bottom = css.marginBottom.toDp(default = PARAGRAPH_MARGIN_BOTTOM_DEFAULT)
       )
   ) {
     Text(
@@ -252,10 +262,10 @@ private fun QuoteItem(quote: ContentElement.Quote) {
       background = css.background,
       modifier = Modifier
         .padding(
-          start = css.marginStart.toDp(default = 32.dp, parentWidth = parentWidth),
+          start = css.marginStart.toDp(default = QUOTE_MARGIN_START_DEFAULT, parentWidth = parentWidth),
           end = css.marginEnd.toDp(default = 0.dp, parentWidth = parentWidth),
-          top = css.marginTop.toDp(default = 4.dp),
-          bottom = css.marginBottom.toDp(default = 4.dp)
+          top = css.marginTop.toDp(default = QUOTE_MARGIN_TOP_DEFAULT),
+          bottom = css.marginBottom.toDp(default = QUOTE_MARGIN_BOTTOM_DEFAULT)
         )
         .then(widthModifier)
     ) {
@@ -286,7 +296,7 @@ private fun ImageItem(image: ContentElement.EpubImage) {
       contentScale = ContentScale.Fit,
       modifier = Modifier
         .fillMaxWidth()
-        .padding(vertical = 8.dp)
+        .padding(vertical = IMAGE_VERTICAL_PADDING_DEFAULT)
     )
   }
 }

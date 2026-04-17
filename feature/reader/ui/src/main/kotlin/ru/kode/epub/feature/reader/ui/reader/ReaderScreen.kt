@@ -115,15 +115,15 @@ fun ReaderScreen(
         state.columnMode == ColumnMode.Double && orientation == ScreenOrientation.Landscape
       ) 2 else 1
 
-      val horizontalPaddingPx = with(density) { 32.dp.roundToPx() }
       val columnGapPx = with(density) { if (columnCount > 1) ColumnGap.roundToPx() else 0 }
       val contentHeightPx = with(density) {
         (constraints.maxHeight - statusBarPadding.roundToPx() - bottomPadding.roundToPx())
           .coerceAtLeast(0)
       }
-      // Width available for all columns (subtract item padding and side system insets)
-      val totalContentWidthPx = (constraints.maxWidth - horizontalPaddingPx - sideHorizontalPx).coerceAtLeast(0)
-      val columnWidthPx = ((totalContentWidthPx - columnGapPx) / columnCount).coerceAtLeast(0)
+      // Full column width (side insets subtracted; item-level padding is handled per element in PageCalculator)
+      val columnWidthPx = (
+        (constraints.maxWidth - sideHorizontalPx - columnGapPx).coerceAtLeast(0) / columnCount
+        ).coerceAtLeast(0)
 
       // Each calculator page = one column
       val calculatorPages = rememberPageBreaks(
@@ -232,7 +232,7 @@ fun ReaderScreen(
         snapshotFlow { pagerState.layoutInfo }
           .mapDistinctNotNullChanges { info ->
             info.visiblePagesInfo.firstOrNull()?.index?.let { idx ->
-              calculatorPages[idx].firstOrNull()?.key
+              calculatorPages.getOrNull(idx)?.firstOrNull()?.key
             }
           }
           .flowOn(Dispatchers.Default)
