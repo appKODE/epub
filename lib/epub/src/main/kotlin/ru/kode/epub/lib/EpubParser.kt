@@ -471,10 +471,10 @@ object EpubParser {
   }
 
   /**
-   * Строит [StyledText] из узла, обрабатывая:
+   * Builds a [StyledText] from a node, handling:
    * - <br>           → \n
-   * - <b>, <strong>  → жирный
-   * - <i>, <em>      → курсив
+   * - <b>, <strong>  → bold
+   * - <i>, <em>      → italic
    */
   private fun buildAnnotatedText(node: Node): StyledText = buildStyledText {
     appendNode(node)

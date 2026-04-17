@@ -12,7 +12,7 @@ sealed class ContentElement {
     val styles: EpubStyle = EpubStyle()
   ) : ContentElement()
 
-  /** Содержимое тега <blockquote>. */
+  /** Content of a &lt;blockquote&gt; tag. */
   data class Quote(
     val text: StyledText,
     val styles: EpubStyle = EpubStyle()
