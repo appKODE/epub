@@ -286,12 +286,14 @@ fun ReaderScreen(
                 tint = AppTheme.colors.iconPrimary
               )
             }
-            IconButton(onClick = viewModel::showToc) {
-              Icon(
-                painter = painterResource(R.drawable.ic_list_24),
-                contentDescription = null,
-                tint = AppTheme.colors.iconPrimary
-              )
+            if (state.toc.isNotEmpty()) {
+              IconButton(onClick = viewModel::showToc) {
+                Icon(
+                  painter = painterResource(R.drawable.ic_list_24),
+                  contentDescription = null,
+                  tint = AppTheme.colors.iconPrimary
+                )
+              }
             }
           },
           windowInsets = WindowInsets.statusBars.union(sideInsets)

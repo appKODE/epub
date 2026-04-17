@@ -109,14 +109,21 @@ object EpubParser {
       chapters.add(chapter)
     }
 
-    // ── Parse NCX table of contents ───────────────────────────────
+    // ── Parse table of contents (NCX for EPUB2, nav doc for EPUB3) ───
     val toc = opfData.tocNcxId
       ?.let { ncxId -> opfData.manifest[ncxId] }
       ?.let { ncxItem ->
         val ncxPath = joinPaths(opfDir, ncxItem.href)
         val ncxContent = fileMap[ncxPath]?.toString(Charsets.UTF_8)
-        ncxContent?.let { parseToc(ncxContent, ncxPath, chapterPathToIndex) }
+        ncxContent?.let { parseNcxToc(it, ncxPath, chapterPathToIndex, chapters) }
       }
+      ?: opfData.navDocId
+        ?.let { navId -> opfData.manifest[navId] }
+        ?.let { navItem ->
+          val navPath = joinPaths(opfDir, navItem.href)
+          val navContent = fileMap[navPath]?.toString(Charsets.UTF_8)
+          navContent?.let { parseNavToc(it, navPath, chapterPathToIndex, chapters) }
+        }
       ?: emptyList()
 
     // ── Cover image ───────────────────────────────────────────────
@@ -196,7 +203,12 @@ object EpubParser {
     val dateYear: Int?
   )
 
-  private data class ManifestItem(val id: String, val href: String, val mediaType: String)
+  private data class ManifestItem(
+    val id: String,
+    val href: String,
+    val mediaType: String,
+    val properties: String = ""
+  )
 
   private data class SpineItem(val idref: String, val linear: Boolean)
 
@@ -205,6 +217,7 @@ object EpubParser {
     val manifest: Map<String, ManifestItem>,
     val spine: List<SpineItem>,
     val tocNcxId: String?,
+    val navDocId: String?,
     val coverManifestId: String?
   )
 
@@ -240,13 +253,16 @@ object EpubParser {
 
     // ── Manifest ──
     val manifest = mutableMapOf<String, ManifestItem>()
+    var navDocId: String? = null
     val manifestNodes = doc.getElementsByTagName("item")
     for (i in 0 until manifestNodes.length) {
       val attrs = manifestNodes.item(i).attributes ?: continue
       val id = attrs.getNamedItem("id")?.nodeValue ?: continue
       val href = attrs.getNamedItem("href")?.nodeValue ?: continue
       val mediaType = attrs.getNamedItem("media-type")?.nodeValue ?: ""
-      manifest[id] = ManifestItem(id, href, mediaType)
+      val properties = attrs.getNamedItem("properties")?.nodeValue ?: ""
+      manifest[id] = ManifestItem(id, href, mediaType, properties)
+      if ("nav" in properties.split(Regex("\\s+"))) navDocId = id
     }
 
     // ── Spine ──
@@ -271,54 +287,90 @@ object EpubParser {
       manifest = manifest,
       spine = spine,
       tocNcxId = tocNcxId,
+      navDocId = navDocId,
       coverManifestId = coverManifestId
     )
   }
 
-  // ──────────────────────── NCX / TOC ────────────────────────────────
+  // ──────────────────────── NCX / TOC (EPUB2) ────────────────────────
 
-  private fun parseToc(
+  private fun parseNcxToc(
     ncxContent: String,
     ncxPath: String,
-    chapterPathToIndex: Map<String, Int>
+    chapterPathToIndex: Map<String, Int>,
+    chapters: List<EpubChapter>
   ): List<TocEntry> {
     val doc = Jsoup.parse(ncxContent, "", Parser.xmlParser())
     return doc.select("navMap > navPoint")
       .sortedBy { it.attr("playOrder").toIntOrNull() ?: Int.MAX_VALUE }
-      .mapNotNull { parseNavPoint(it, ncxPath, chapterPathToIndex) }
+      .mapNotNull { parseNcxNavPoint(it, ncxPath, chapterPathToIndex, chapters) }
   }
 
-  private fun parseNavPoint(
+  private fun parseNcxNavPoint(
     navPoint: Element,
     ncxPath: String,
-    chapterPathToIndex: Map<String, Int>
+    chapterPathToIndex: Map<String, Int>,
+    chapters: List<EpubChapter>
   ): TocEntry? {
     val title = navPoint.selectFirst("> navLabel > text")
-      ?.text()
-      ?.trim()
-      ?.takeIf { it.isNotEmpty() }
+      ?.text()?.trim()?.takeIf { it.isNotEmpty() }
       ?: return null
 
     val src = navPoint.selectFirst("> content")
-      ?.attr("src")
-      ?.takeIf { it.isNotEmpty() }
+      ?.attr("src")?.takeIf { it.isNotEmpty() }
       ?: return null
 
     val srcFile = src.substringBefore("#")
     val anchorId = src.substringAfter("#", "").takeIf { it.isNotEmpty() }
     val absolutePath = resolvePath(ncxPath, srcFile)
     val chapterIndex = chapterPathToIndex[absolutePath] ?: return null
+    if (chapters.getOrNull(chapterIndex)?.elements.isNullOrEmpty()) return null
 
     val children = navPoint.select("> navPoint")
       .sortedBy { it.attr("playOrder").toIntOrNull() ?: Int.MAX_VALUE }
-      .mapNotNull { parseNavPoint(it, ncxPath, chapterPathToIndex) }
+      .mapNotNull { parseNcxNavPoint(it, ncxPath, chapterPathToIndex, chapters) }
 
-    return TocEntry(
-      title = title,
-      chapterIndex = chapterIndex,
-      anchorId = anchorId,
-      children = children
-    )
+    return TocEntry(title = title, chapterIndex = chapterIndex, anchorId = anchorId, children = children)
+  }
+
+  // ──────────────────────── Nav doc TOC (EPUB3) ──────────────────────
+
+  private fun parseNavToc(
+    navContent: String,
+    navPath: String,
+    chapterPathToIndex: Map<String, Int>,
+    chapters: List<EpubChapter>
+  ): List<TocEntry> {
+    val doc = Jsoup.parse(navContent, "", Parser.xmlParser())
+    // Find <nav epub:type="toc"> or fall back to the first <nav>
+    val nav = doc.select("nav").firstOrNull { el ->
+      el.attr("epub:type") == "toc" || el.attr("epub|type") == "toc"
+    } ?: doc.selectFirst("nav") ?: return emptyList()
+
+    return nav.select("> ol > li")
+      .mapNotNull { parseNavItem(it, navPath, chapterPathToIndex, chapters) }
+  }
+
+  private fun parseNavItem(
+    li: Element,
+    navPath: String,
+    chapterPathToIndex: Map<String, Int>,
+    chapters: List<EpubChapter>
+  ): TocEntry? {
+    val a = li.selectFirst("> a") ?: return null
+    val title = a.text().trim().takeIf { it.isNotEmpty() } ?: return null
+    val href = a.attr("href").takeIf { it.isNotEmpty() } ?: return null
+
+    val srcFile = href.substringBefore("#")
+    val anchorId = href.substringAfter("#", "").takeIf { it.isNotEmpty() }
+    val absolutePath = resolvePath(navPath, srcFile)
+    val chapterIndex = chapterPathToIndex[absolutePath] ?: return null
+    if (chapters.getOrNull(chapterIndex)?.elements.isNullOrEmpty()) return null
+
+    val children = li.select("> ol > li")
+      .mapNotNull { parseNavItem(it, navPath, chapterPathToIndex, chapters) }
+
+    return TocEntry(title = title, chapterIndex = chapterIndex, anchorId = anchorId, children = children)
   }
 
   // ───────────────────────── HTML chapter ────────────────────────────
