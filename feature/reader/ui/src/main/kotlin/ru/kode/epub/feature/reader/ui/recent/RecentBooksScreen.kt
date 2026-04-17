@@ -33,7 +33,10 @@ import kotlin.time.Clock
 @Composable
 fun RecentBooksScreen(
   viewModel: RecentBooksViewModel
-) = AppScreen(viewModel) { state ->
+) = AppScreen(
+  viewModel = viewModel,
+  onBackPress = { },
+) { state ->
   Box(
     modifier = Modifier
       .cutoutPadding()
@@ -99,7 +102,7 @@ private fun BooksStub(
   )
 }
 
-val BookPreviewCardMinWidth = 180.dp
+val BookPreviewCardMinWidth = 160.dp
 
 private val placeholderBook = Book(
   id = randomUuid(),

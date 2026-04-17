@@ -32,7 +32,7 @@ fun ModalBottomSheet(
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
   ModalBottomSheet(
     modifier = modifier.padding(top = topPadding),
-    containerColor = AppTheme.colors.surfaceBackground,
+    containerColor = AppTheme.colors.surfaceLayer1,
     shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
     dragHandle = if (showHandle) {
       { BottomSheetHandle() }

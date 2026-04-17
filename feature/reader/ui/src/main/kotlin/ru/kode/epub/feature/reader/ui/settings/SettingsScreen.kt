@@ -26,6 +26,7 @@ import ru.kode.epub.core.uikit.component.DropdownField
 import ru.kode.epub.core.uikit.component.NegativeButton
 import ru.kode.epub.core.uikit.component.Text
 import ru.kode.epub.core.uikit.component.TopAppBar
+import ru.kode.epub.core.uikit.component.VSpacer
 import ru.kode.epub.core.uikit.compose.itemsIndexedWithShape
 import ru.kode.epub.core.uikit.theme.AppTheme
 import ru.kode.epub.feature.reader.domain.entity.ColumnMode
@@ -51,17 +52,19 @@ fun SettingsScreen(
   ) {
     TopAppBar(title = stringResource(id = R.string.settings_screen_title))
     LazyColumn(
-      modifier = Modifier
-        .fillMaxWidth(),
+      modifier = Modifier.fillMaxWidth(),
       contentPadding = PaddingValues(16.dp),
-      horizontalAlignment = Alignment.CenterHorizontally
+      horizontalAlignment = Alignment.CenterHorizontally,
     ) {
       state.settings.forEach { settings ->
         when (settings.selected) {
-          is NightMode -> nightMode(
-            settings = settings,
-            onSelect = { viewModel.apply(settings.copy(selected = it)) }
-          )
+          is NightMode -> {
+            nightMode(
+              settings = settings,
+              onSelect = { viewModel.apply(settings.copy(selected = it)) }
+            )
+            item { VSpacer(24.dp) }
+          }
 
           is ColumnMode,
           is PageScrollMode -> dropDownMenu(
@@ -87,13 +90,12 @@ private fun LazyListScope.dropDownMenu(
 ) {
   item {
     DropdownField(
-      modifier = Modifier.padding(top = 8.dp),
       options = settings.available,
       selected = settings.selected ?: settings.defaultSelected(),
       onSelect = onSelect,
       title = { entry -> resolveRef(entry.displayName) },
       label = resolveRef(settings.name),
-      hint = settings.description?.let { resolveRef(it) }.orEmpty()
+      hint = settings.description?.let { resolveRef(it) }
     )
   }
 }
@@ -102,7 +104,7 @@ private fun LazyListScope.nightMode(
   settings: ReaderSettings,
   onSelect: (ReaderSettings.Entry) -> Unit
 ) {
-  stickyHeader {
+  item("reader_theme_header") {
     Text(
       modifier = Modifier
         .fillMaxWidth()

@@ -65,7 +65,7 @@ abstract class ViewModel<VS : Any, R : Any> {
   }
 
   protected fun emitResult(result: R) {
-    viewModelScope.launch {
+    attachedScope.launch {
       _screenEvents.emitOnSubscribed(result)
     }
   }
