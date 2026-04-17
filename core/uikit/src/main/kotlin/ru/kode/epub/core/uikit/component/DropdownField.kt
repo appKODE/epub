@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -73,7 +74,9 @@ fun <T : Any> DropdownField(
           tint = AppTheme.colors.iconTertiary
         )
       },
-      modifier = Modifier.clickable { expanded = !expanded }
+      modifier = Modifier
+        .clip(TextFieldShape)
+        .clickable { expanded = !expanded }
     )
     FormFieldHint(hasError, hint.orEmpty())
   }
@@ -91,7 +94,8 @@ private fun <T : Any> Dropdown(
 ) {
   DropdownMenu(
     expanded = expanded,
-    onDismissRequest = onDismiss
+    onDismissRequest = onDismiss,
+    containerColor = AppTheme.colors.surfaceLayer2
   ) {
     Column(modifier = Modifier.fillMaxWidth()) {
       options.forEach { option ->
