@@ -93,7 +93,7 @@ fun readerSettings(): List<ReaderSettings> {
 internal fun SelectorSettings.getDefaultValue(): ReaderSettings.Entry {
   return when (this) {
     SelectorSettings.AppThemeMode -> NightMode.Auto
-    SelectorSettings.PageScroll -> PageScrollMode.Vertical
-    SelectorSettings.Columns -> ColumnMode.Single
+    SelectorSettings.PageScroll -> PageScrollMode.Horizontal
+    SelectorSettings.Columns -> ColumnMode.Double
   }
 }
