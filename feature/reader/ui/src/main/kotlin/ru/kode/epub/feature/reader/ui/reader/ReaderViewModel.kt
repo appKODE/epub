@@ -17,6 +17,7 @@ import ru.kode.epub.feature.reader.domain.entity.PageScrollMode
 import ru.kode.epub.lib.EpubParser
 import ru.kode.epub.lib.entity.EpubBook
 import ru.kode.epub.lib.entity.TocEntry
+import timber.log.Timber
 
 @Stable
 class ReaderViewModel @Inject constructor(
@@ -72,6 +73,7 @@ class ReaderViewModel @Inject constructor(
   }
 
   fun toggleTopBar() {
+    Timber.d("BAR-DBG: toggle bar")
     stateFlow.update { it.copy(isTopBarVisible = !it.isTopBarVisible) }
   }
 
@@ -96,13 +98,10 @@ class ReaderViewModel @Inject constructor(
     stateFlow.update { it.copy(scrollToElementIndex = elementIndex) }
   }
 
-  fun onCurrentPageChanged(elementIndex: Int) {
+  fun onScroll(key: String, elementIndex: Int) {
     stateFlow.update { it.copy(currentElementIndex = elementIndex) }
-  }
-
-  fun onScroll(key: Any) {
     epub.flattenElements()
-    model.updateBookPosition(book.id, key.toString())
+    model.updateBookPosition(book.id, key)
   }
 
   private fun selectTocEntry(entry: TocEntry) {

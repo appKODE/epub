@@ -15,7 +15,7 @@ data class ViewState(
   val tocAnchors: List<TocAnchor> = emptyList(),
   val bookInfo: BookInfo = BookInfo(),
   val fontFiles: List<EpubFontFile> = emptyList(),
-  val isTopBarVisible: Boolean = true,
+  val isTopBarVisible: Boolean = false,
   val currentElementIndex: Int? = null,
   val scrollToElementIndex: Int? = null,
   val scrollMode: PageScrollMode? = null,
