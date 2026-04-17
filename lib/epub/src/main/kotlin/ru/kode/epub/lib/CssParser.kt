@@ -47,10 +47,11 @@ object CssParser {
       val idx = decl.indexOf(':')
       if (idx < 0) continue
       val prop = decl.substring(0, idx).trim().lowercase()
-      val value = decl.substring(idx + 1)
+      val rawValue = decl.substring(idx + 1)
         .replace(Regex("!important", RegexOption.IGNORE_CASE), "")
         .trim()
-        .lowercase()
+      // Preserve original case for url() values — file paths may be case-sensitive
+      val value = if (rawValue.startsWith("url(", ignoreCase = true)) rawValue else rawValue.lowercase()
       if (prop.isNotEmpty() && value.isNotEmpty()) {
         result[prop] = value
       }

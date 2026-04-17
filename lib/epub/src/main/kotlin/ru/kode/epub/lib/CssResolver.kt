@@ -1,6 +1,7 @@
 package ru.kode.epub.lib
 
 import ru.kode.epub.lib.entity.CssLength
+import ru.kode.epub.lib.entity.EpubBackground
 import ru.kode.epub.lib.entity.EpubStyle
 import ru.kode.epub.lib.entity.EpubTextAlign
 
@@ -16,7 +17,8 @@ import ru.kode.epub.lib.entity.EpubTextAlign
  *  - Descendant:  `blockquote div`, `div img` (ancestor tags only, not classes)
  *
  * Properties handled: text-align, font-size (% only), font-style, font-weight,
- * text-indent (em/0), margin / margin-left / right / top / bottom (em/0), color (#hex).
+ * text-indent (em/0), margin / margin-left / right / top / bottom (em/0), color (#hex),
+ * background-color (#hex), background-image url, background-size (em), padding-left.
  */
 object CssResolver {
 
@@ -33,7 +35,19 @@ object CssResolver {
     classes: Set<String>,
     ancestors: List<String> = emptyList(),
     inlineStyle: String? = null
-  ): EpubStyle {
+  ): EpubStyle = toEpubStyle(resolveRaw(rules, tag, classes, ancestors, inlineStyle))
+
+  /**
+   * Returns merged raw CSS declarations for the element (before converting to [EpubStyle]).
+   * Useful when callers need properties not yet modelled in [EpubStyle] (e.g. background-image url).
+   */
+  fun resolveRaw(
+    rules: List<CssRule>,
+    tag: String,
+    classes: Set<String>,
+    ancestors: List<String> = emptyList(),
+    inlineStyle: String? = null
+  ): Map<String, String> {
     val merged = mutableMapOf<String, String>()
     for (rule in rules) {
       if (rule.selectors.any { selectorMatches(it.trim(), tag, classes, ancestors) }) {
@@ -43,7 +57,7 @@ object CssResolver {
     if (!inlineStyle.isNullOrBlank()) {
       merged.putAll(CssParser.parseDeclarations(inlineStyle))
     }
-    return toEpubStyle(merged)
+    return merged
   }
 
   // ─────────────────────────── Selector matching ─────────────────────────
@@ -93,7 +107,7 @@ object CssResolver {
   // ──────────────────────── Declaration → EpubStyle ──────────────────────
 
   @Suppress("NestedBlockDepth", "CyclomaticComplexMethod")
-  private fun toEpubStyle(decls: Map<String, String>): EpubStyle {
+  internal fun toEpubStyle(decls: Map<String, String>): EpubStyle {
     var textAlign: EpubTextAlign? = null
     var fontSizePercent: Int? = null
     var italic: Boolean? = null
@@ -105,6 +119,12 @@ object CssResolver {
     var marginBottomEm: CssLength? = null
     var widthLen: CssLength? = null
     var color: Long? = null
+    var background: EpubBackground? = null
+    var paddingStart: CssLength? = null
+    var paddingEnd: CssLength? = null
+    var paddingTop: CssLength? = null
+    var paddingBottom: CssLength? = null
+    var minHeight: CssLength? = null
 
     for ((prop, value) in decls) {
       when (prop) {
@@ -142,20 +162,31 @@ object CssResolver {
         "margin-bottom" -> marginBottomEm = parseLength(value)
         "width" -> widthLen = parseLength(value)
         "color" -> color = parseColor(value)
+        "background-color" -> if (background == null) {
+          parseColor(value)?.let { background = EpubBackground.SolidColor(it) }
+        }
+        "padding" -> parseLength(value)?.let { len ->
+          paddingStart = len; paddingEnd = len; paddingTop = len; paddingBottom = len
+        }
+        "padding-left" -> paddingStart = parseLength(value)
+        "padding-right" -> paddingEnd = parseLength(value)
+        "padding-top" -> paddingTop = parseLength(value)
+        "padding-bottom" -> paddingBottom = parseLength(value)
+        "min-height" -> minHeight = parseLength(value)
       }
     }
 
     return EpubStyle(
       textAlign, fontSizePercent, italic, bold,
       textIndentEm, marginStartEm, marginEndEm, marginTopEm, marginBottomEm,
-      widthLen, color
+      widthLen, color, background, paddingStart, paddingEnd, paddingTop, paddingBottom, minHeight
     )
   }
 
   // ─────────────────────────── Value parsers ─────────────────────────────
 
   /** Parses `0`, em, or % lengths. Returns null for px/rem/other. */
-  private fun parseLength(value: String): CssLength? = when {
+  internal fun parseLength(value: String): CssLength? = when {
     value == "0" || value == "0px" || value == "0em" || value == "0%" ->
       CssLength.Em(0f)
     value.endsWith("em") ->
@@ -172,7 +203,12 @@ object CssResolver {
     else -> null
   }
 
-  private fun parseColor(value: String): Long? {
+  internal fun extractUrlPath(value: String): String? {
+    val match = Regex("""url\(['"]?([^'")\s]+)['"]?\)""", RegexOption.IGNORE_CASE).find(value)
+    return match?.groupValues?.get(1)?.trim()
+  }
+
+  internal fun parseColor(value: String): Long? {
     if (!value.startsWith("#")) return null
     val hex = value.removePrefix("#")
     return when (hex.length) {

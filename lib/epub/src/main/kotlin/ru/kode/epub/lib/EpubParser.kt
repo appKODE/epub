@@ -10,6 +10,8 @@ import org.jsoup.parser.Parser
 import org.w3c.dom.Document
 import org.xml.sax.InputSource
 import ru.kode.epub.lib.entity.ContentElement
+import ru.kode.epub.lib.entity.CssLength
+import ru.kode.epub.lib.entity.EpubBackground
 import ru.kode.epub.lib.entity.EpubBook
 import ru.kode.epub.lib.entity.EpubChapter
 import ru.kode.epub.lib.entity.EpubFontFile
@@ -75,7 +77,15 @@ object EpubParser {
       if (!isCss) return@forEach
       val cssPath = joinPaths(opfDir, item.href)
       val cssText = fileMap[cssPath]?.toString(Charsets.UTF_8) ?: return@forEach
-      cssRules.addAll(CssParser.parse(cssText))
+      // Resolve background-image URLs to zip-root-relative paths while we still know cssPath
+      cssRules.addAll(
+        CssParser.parse(cssText).map { rule ->
+          val bgImage = rule.declarations["background-image"] ?: return@map rule
+          val relUrl = CssResolver.extractUrlPath(bgImage) ?: return@map rule
+          val absolutePath = resolvePath(cssPath, relUrl)
+          rule.copy(declarations = rule.declarations + ("background-image" to "url('$absolutePath')"))
+        }
+      )
     }
 
     // ── Build chapters from spine ──────────────────────────────────
@@ -371,8 +381,12 @@ object EpubParser {
       tag == "p" -> {
         val text = buildAnnotatedText(element)
         if (text.text.isNotBlank()) {
+          val resolvedStyle = styles().let { s ->
+            val bg = resolveBackground(element, tag, cssRules, ancestors, fileMap)
+            if (bg != null) s.copy(background = bg) else s
+          }
           domId?.let { anchorIndex[it] = result.size }
-          result.add(ContentElement.Paragraph(text, styles()))
+          result.add(ContentElement.Paragraph(text, resolvedStyle))
         }
         element.select("img, image").forEach { img ->
           addImage(img, chapterPath, fileMap, result)
@@ -521,5 +535,62 @@ object EpubParser {
     if (dir.isEmpty()) return href
     if (href.startsWith("/")) return href.removePrefix("/")
     return "$dir/$href"
+  }
+
+  /**
+   * Resolves CSS background for [element] into [EpubBackground], loading image bytes from [fileMap].
+   * background-image URL must already be zip-root-relative (resolved during CSS loading).
+   * Returns null if no background is defined.
+   */
+  private fun resolveBackground(
+    element: Element,
+    tag: String,
+    cssRules: List<CssRule>,
+    ancestors: List<String>,
+    fileMap: Map<String, ByteArray>
+  ): EpubBackground? {
+    val decls = CssResolver.resolveRaw(
+      rules = cssRules,
+      tag = tag,
+      classes = element.classNames(),
+      ancestors = ancestors,
+      inlineStyle = element.attr("style").takeIf { it.isNotEmpty() }
+    )
+
+    val bgImageValue = decls["background-image"]
+    if (bgImageValue != null) {
+      val absPath = CssResolver.extractUrlPath(bgImageValue)
+      val data = absPath?.let {
+        fileMap[it] ?: fileMap.entries.firstOrNull { e -> e.key.endsWith(it) }?.value
+      }
+      if (data != null) {
+        val size = decls["background-size"]
+          ?.split(Regex("\\s+"))?.firstOrNull()
+          ?.let { CssResolver.parseLength(it) }
+        val positionParts = decls["background-position"]?.split(Regex("\\s+"))
+        val posX = positionParts?.getOrNull(0)?.let { parseBackgroundPosition(it, horizontal = true) }
+          ?: CssLength.Percent(0f)
+        val posY = positionParts?.getOrNull(1)?.let { parseBackgroundPosition(it, horizontal = false) }
+          ?: CssLength.Percent(0f)
+        val repeat = decls["background-repeat"]?.let { it != "no-repeat" } ?: false
+        return EpubBackground.Image(data, size, posX, posY, repeat)
+      }
+    }
+
+    val bgColor = decls["background-color"]
+    if (bgColor != null) {
+      CssResolver.parseColor(bgColor)?.let { return EpubBackground.SolidColor(it) }
+    }
+
+    return null
+  }
+
+  private fun parseBackgroundPosition(token: String, horizontal: Boolean): CssLength? = when (token) {
+    "left" -> CssLength.Percent(0f)
+    "center" -> CssLength.Percent(50f)
+    "right" -> CssLength.Percent(100f)
+    "top" -> if (!horizontal) CssLength.Percent(0f) else null
+    "bottom" -> if (!horizontal) CssLength.Percent(100f) else null
+    else -> CssResolver.parseLength(token)
   }
 }

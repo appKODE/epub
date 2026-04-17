@@ -19,7 +19,19 @@ data class EpubStyle(
   /** Explicit content width (e.g. width: 60%). */
   val width: CssLength? = null,
   /** Packed ARGB color (same format as android.graphics.Color). */
-  val color: Long? = null
+  val color: Long? = null,
+  /** CSS background (color or image with position/size). */
+  val background: EpubBackground? = null,
+  /** CSS padding-left. */
+  val paddingStart: CssLength? = null,
+  /** CSS padding-right. */
+  val paddingEnd: CssLength? = null,
+  /** CSS padding-top. */
+  val paddingTop: CssLength? = null,
+  /** CSS padding-bottom. */
+  val paddingBottom: CssLength? = null,
+  /** CSS min-height. */
+  val minHeight: CssLength? = null
 ) {
   /**
    * Returns a new style with [override]'s non-null fields taking precedence.
@@ -36,7 +48,13 @@ data class EpubStyle(
     marginTop = override.marginTop ?: marginTop,
     marginBottom = override.marginBottom ?: marginBottom,
     width = override.width ?: width,
-    color = override.color ?: color
+    color = override.color ?: color,
+    background = override.background ?: background,
+    paddingStart = override.paddingStart ?: paddingStart,
+    paddingEnd = override.paddingEnd ?: paddingEnd,
+    paddingTop = override.paddingTop ?: paddingTop,
+    paddingBottom = override.paddingBottom ?: paddingBottom,
+    minHeight = override.minHeight ?: minHeight
   )
 
   /**
@@ -52,7 +70,13 @@ data class EpubStyle(
     italic = child.italic ?: italic,
     bold = child.bold ?: bold,
     textIndentEm = child.textIndentEm ?: textIndentEm,
-    color = child.color ?: color
+    color = child.color ?: color,
+    background = child.background ?: background,
+    paddingStart = child.paddingStart ?: paddingStart,
+    paddingEnd = child.paddingEnd ?: paddingEnd,
+    paddingTop = child.paddingTop ?: paddingTop,
+    paddingBottom = child.paddingBottom ?: paddingBottom,
+    minHeight = child.minHeight ?: minHeight
   )
 }
 
