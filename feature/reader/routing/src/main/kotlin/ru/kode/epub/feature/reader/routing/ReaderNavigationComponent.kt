@@ -71,10 +71,6 @@ class ReaderNavigationComponent(
       .onEach { book -> navigate { bringToFront(Config.Reader(book)) } }
       .launchIn(scope)
 
-    model.epubReads
-      .onEach { book -> navigate { bringToFront(Config.Reader(book)) } }
-      .launchIn(scope)
-
     model.epubReadErrors
       .onEach { error ->
         val event = when (error) {
