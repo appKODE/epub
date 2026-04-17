@@ -32,6 +32,11 @@ UPDATE Book
 SET positionKey = ?
 WHERE id = ?;
 
+updateTotalElements:
+UPDATE Book
+SET totalElements = ?
+WHERE id = ?;
+
 deleteOldest:
 DELETE FROM Book
 WHERE updatedAt = (SELECT MIN(updatedAt) FROM Book);

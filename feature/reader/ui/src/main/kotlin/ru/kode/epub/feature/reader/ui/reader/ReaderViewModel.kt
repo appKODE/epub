@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import me.tatarka.inject.annotations.Assisted
 import me.tatarka.inject.annotations.Inject
 import ru.kode.epub.core.ui.screen.ViewModel
@@ -27,24 +28,28 @@ class ReaderViewModel @Inject constructor(
 
   override fun initialState() = ViewState()
 
-  override fun onStart() {
-    val elements = epub.flattenElements()
-    stateFlow.update {
-      it.copy(
-        elements = elements,
-        toc = epub.toc,
-        tocAnchors = epub.buildTocAnchors(),
-        bookInfo = BookInfo(
-          title = epub.title,
-          author = epub.author,
-          coverImage = epub.coverImage,
-          categories = epub.categories,
-          language = epub.language,
-          description = epub.description
-        ),
-        fontFiles = epub.fontFiles,
-        scrollToElementIndex = book.progress.positionKey.elementIdx.toInt()
-      )
+  init {
+    viewModelScope.launch {
+      val elements = epub.flattenElements()
+      stateFlow.update {
+        it.copy(
+          loading = false,
+          elements = elements,
+          toc = epub.toc,
+          tocAnchors = epub.buildTocAnchors(),
+          bookInfo = BookInfo(
+            title = epub.title,
+            author = epub.author,
+            coverImage = epub.coverImage,
+            categories = epub.categories,
+            language = epub.language,
+            description = epub.description
+          ),
+          fontFiles = epub.fontFiles,
+          scrollToElementIndex = book.progress.positionKey.elementIdx.toInt()
+        )
+      }
+      model.updateBookTotalElements(book.id, elements.size)
     }
 
     model.readerSettings

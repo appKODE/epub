@@ -12,3 +12,10 @@ data class EpubBook(
   val toc: List<TocEntry>,
   val fontFiles: List<EpubFontFile> = emptyList()
 )
+
+data class EpubMetadata(
+  val title: String,
+  val author: String,
+  val coverImage: ContentElement.EpubImage?,
+  val totalChapters: Int
+)

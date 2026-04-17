@@ -13,6 +13,7 @@ import ru.kode.epub.lib.entity.ContentElement
 import ru.kode.epub.lib.entity.EpubBook
 import ru.kode.epub.lib.entity.EpubChapter
 import ru.kode.epub.lib.entity.EpubFontFile
+import ru.kode.epub.lib.entity.EpubMetadata
 import ru.kode.epub.lib.entity.StyledText
 import ru.kode.epub.lib.entity.StyledTextBuilder
 import ru.kode.epub.lib.entity.TocEntry
@@ -23,6 +24,33 @@ import java.util.zip.ZipInputStream
 import javax.xml.parsers.DocumentBuilderFactory
 
 object EpubParser {
+
+  fun parseMetadata(context: Context, uri: Uri): EpubMetadata {
+    val fileMap = readZipEntries(context, uri)
+    val containerXml = fileMap["META-INF/container.xml"]
+      ?.toString(Charsets.UTF_8)
+      ?: error("META-INF/container.xml not found in epub")
+    val opfPath = parseContainerXml(containerXml)
+    val opfDir = opfPath.substringBeforeLast("/", "")
+    val opfContent = fileMap[opfPath]
+      ?.toString(Charsets.UTF_8)
+      ?: error("OPF file not found at: $opfPath")
+    val opfData = parseOpf(opfContent)
+
+    return EpubMetadata(
+      title = opfData.metadata.title.ifBlank { "Unknown Title" },
+      author = opfData.metadata.author.ifBlank { "Unknown Author" },
+      coverImage = opfData.coverManifestId
+        ?.let { coverId -> opfData.manifest[coverId] }
+        ?.let { coverItem ->
+          val coverPath = joinPaths(opfDir, coverItem.href)
+          fileMap[coverPath]?.let { data ->
+            ContentElement.EpubImage(data, "cover")
+          }
+        },
+      totalChapters = opfData.spine.size
+    )
+  }
 
   fun parse(context: Context, uri: Uri): EpubBook {
     val fileMap = readZipEntries(context, uri)

@@ -40,6 +40,10 @@ class ReaderModel @Inject constructor(
     coroutineScope.launch { repository.updateBookPosition(id, positionKey) }
   }
 
+  fun updateBookTotalElements(id: String, elements: Int) {
+    coroutineScope.launch { repository.updateBookTotalElements(id, elements) }
+  }
+
   fun removeAllBooks() {
     scheduler.startLatest(clearStorage, Unit)
   }

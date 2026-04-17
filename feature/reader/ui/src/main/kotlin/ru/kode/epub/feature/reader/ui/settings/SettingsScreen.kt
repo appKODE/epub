@@ -38,7 +38,10 @@ import ru.kode.epub.feature.reader.ui.component.NightModeListItem
 @Composable
 fun SettingsScreen(
   viewModel: SettingsViewModel
-) = AppScreen(viewModel) { state ->
+) = AppScreen(
+  viewModel = viewModel,
+  onBackPress = { }
+) { state ->
   Column(
     modifier = Modifier
       .cutoutPadding()

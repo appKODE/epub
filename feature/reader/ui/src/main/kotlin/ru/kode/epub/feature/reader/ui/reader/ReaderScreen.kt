@@ -1,6 +1,8 @@
 package ru.kode.epub.feature.reader.ui.reader
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
@@ -65,11 +67,12 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import ru.kode.epub.core.domain.mapDistinctNotNullChanges
 import ru.kode.epub.core.domain.entity.ScreenOrientation
+import ru.kode.epub.core.domain.mapDistinctNotNullChanges
 import ru.kode.epub.core.ui.compose.LocalScreenOrientation
 import ru.kode.epub.core.ui.screen.AppScreen
 import ru.kode.epub.core.uikit.R
+import ru.kode.epub.core.uikit.component.CircularLoaderWithOverlay
 import ru.kode.epub.core.uikit.theme.AppTheme
 import ru.kode.epub.core.uikit.touch.disableClickThrough
 import ru.kode.epub.feature.reader.domain.entity.ColumnMode
@@ -334,6 +337,13 @@ fun ReaderScreen(
           sideEnd = sideEnd
         )
       }
+    }
+    AnimatedVisibility(
+      visible = state.loading,
+      enter = fadeIn(),
+      exit = fadeOut()
+    ) {
+      CircularLoaderWithOverlay(modifier = Modifier.fillMaxSize())
     }
   }
 }

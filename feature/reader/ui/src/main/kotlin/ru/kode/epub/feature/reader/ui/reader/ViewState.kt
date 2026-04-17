@@ -9,6 +9,7 @@ import ru.kode.epub.lib.entity.TocEntry
 
 @Immutable
 data class ViewState(
+  val loading: Boolean = true,
   val elements: List<IndexedElement> = emptyList(),
   val toc: List<TocEntry> = emptyList(),
   val tocAnchors: List<TocAnchor> = emptyList(),

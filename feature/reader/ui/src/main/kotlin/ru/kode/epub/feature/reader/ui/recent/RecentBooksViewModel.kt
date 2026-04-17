@@ -14,6 +14,7 @@ import me.tatarka.inject.annotations.Inject
 import ru.kode.epub.core.domain.di.AppScope
 import ru.kode.epub.core.domain.di.SingleIn
 import ru.kode.epub.core.domain.entity.resRef
+import ru.kode.epub.core.domain.onEachLatest
 import ru.kode.epub.core.ui.screen.ViewModel
 import ru.kode.epub.core.uikit.component.Dialog
 import ru.kode.epub.core.uikit.component.Snackbar
@@ -29,7 +30,7 @@ class RecentBooksViewModel @Inject constructor(
 
   override fun initialState() = ViewState()
 
-  override fun onStart() {
+  init {
     model.books
       .onEach { books -> stateFlow.update { it.copy(books = books, loading = false) } }
       .launchIn(viewModelScope)
@@ -39,7 +40,7 @@ class RecentBooksViewModel @Inject constructor(
       .launchIn(viewModelScope)
 
     launcher.results
-      .onEach(model::readEpub)
+      .onEachLatest(model::readEpub)
       .launchIn(viewModelScope)
   }
 

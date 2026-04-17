@@ -14,6 +14,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.arkivanov.decompose.extensions.compose.stack.Children
+import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimation
 import com.arkivanov.decompose.extensions.compose.stack.animation.slide
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
 import ru.kode.epub.core.domain.entity.ScreenOrientation
@@ -40,7 +41,11 @@ fun ReaderFlow(
     ) {
       Children(
         stack = component.stack,
-        animation = stackAnimation(slide()),
+        animation = predictiveBackAnimation(
+          backHandler = component.backHandler,
+          fallbackAnimation = stackAnimation(slide()),
+          onBack = component::handleBack
+        ),
         content = { child ->
           when (val instance = child.instance) {
             is Child.Reader -> ReaderScreen(instance.viewModel)

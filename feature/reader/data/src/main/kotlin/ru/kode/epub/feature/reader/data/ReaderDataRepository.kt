@@ -73,8 +73,8 @@ class ReaderDataRepository @Inject constructor(
     val id = randomUuid()
     val file = uri.copyTo(id, storage)
     val copy = Uri.fromFile(file)
-    val epub = EpubParser.parse(context, copy)
-    val cover = epub.coverImage?.let { image ->
+    val metadata = EpubParser.parseMetadata(context, copy)
+    val cover = metadata.coverImage?.let { image ->
       runCatching {
         val file = File(context.storageDir, "$id.cover")
         FileOutputStream(file).use { fos -> fos.write(image.data) }
@@ -83,7 +83,7 @@ class ReaderDataRepository @Inject constructor(
         .getOrNull()
     }
       ?.let(Uri::fromFile)
-    val book = createBook(epub = epub, id = id, uri = copy.toString(), cover = cover.toString())
+    val book = createBook(epub = metadata, id = id, uri = copy.toString(), cover = cover.toString())
     booksDatabase.bookQueries.insertOrReplace(book)
     book.toDomainModel()
   }
@@ -111,6 +111,12 @@ class ReaderDataRepository @Inject constructor(
   override suspend fun updateBookPosition(id: String, positionKey: String) {
     withContext(Dispatchers.IO) {
       booksDatabase.bookQueries.updateLastKey(positionKey, id)
+    }
+  }
+
+  override suspend fun updateBookTotalElements(id: String, totalElements: Int) {
+    withContext(Dispatchers.IO) {
+      booksDatabase.bookQueries.updateTotalElements(totalElements.toLong(), id)
     }
   }
 

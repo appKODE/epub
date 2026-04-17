@@ -21,5 +21,8 @@ data class Book(
     val totalElements: Long = 0L
   )
 
-  val readProgress: Float = progress.positionKey.elementIdx / progress.totalElements.toFloat()
+  val readProgress: Float =
+    if (progress.totalElements > 0) {
+      progress.positionKey.elementIdx / progress.totalElements.toFloat()
+    } else 0f
 }

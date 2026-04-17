@@ -6,14 +6,14 @@ import kotlinx.datetime.toLocalDateTime
 import ru.kode.epub.feature.reader.domain.entity.PositionKey
 import ru.kode.epub.feature.reader.domain.entity.ReaderSettings
 import ru.kode.epub.feature.reader.domain.entity.toPositionKey
-import ru.kode.epub.lib.entity.EpubBook
+import ru.kode.epub.lib.entity.EpubMetadata
 import kotlin.time.Clock
 import kotlin.time.Instant
 import ru.kode.epub.feature.reader.data.Book as DataBook
 import ru.kode.epub.feature.reader.domain.entity.Book as DomainBook
 
 internal fun createBook(
-  epub: EpubBook,
+  epub: EpubMetadata,
   id: String,
   uri: String,
   cover: String
@@ -26,8 +26,8 @@ internal fun createBook(
     author = epub.author,
     updatedAt = Clock.System.now(),
     positionKey = null,
-    totalElements = epub.chapters.sumOf { it.elements.size }.toLong(),
-    totalChapters = epub.chapters.size.toLong()
+    totalElements = 1L,
+    totalChapters = epub.totalChapters.toLong()
   )
 }
 

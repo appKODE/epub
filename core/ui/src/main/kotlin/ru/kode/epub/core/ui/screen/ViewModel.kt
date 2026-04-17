@@ -45,8 +45,8 @@ abstract class ViewModel<VS : Any, R : Any> {
     get() = stateFlow.asStateFlow()
 
   open fun onStart() = Unit
-  protected fun onDetach() = Unit
-  protected fun onDestroy() = Unit
+  protected open fun onDetach() = Unit
+  protected open fun onDestroy() = Unit
 
   fun detach() {
     attachedScope.coroutineContext.cancelChildren()

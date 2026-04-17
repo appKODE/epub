@@ -48,7 +48,6 @@ class ReaderNavigationComponent(
 
   override fun onCreate() {
     super.onCreate()
-
     when (params) {
       is ReaderFlowParams.Book -> model.readEpub(params.uri)
       is ReaderFlowParams.Recent -> Unit
