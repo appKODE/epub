@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.zIndex
 import androidx.core.view.WindowCompat
 import coil3.ImageLoader
@@ -82,6 +83,7 @@ open class MainActivity : ComponentActivity() {
 
       AppTheme(useDarkTheme = isDark) {
         WindowBackgroundEffect(color = AppTheme.colors.surfaceBackground)
+        SystemBarsColorEffect(isDark)
         CompositionLocalProvider(
           LocalScreenOrientation provides orientation,
           LocalViewEventsHostMediator provides viewEventsMediator
@@ -108,6 +110,18 @@ open class MainActivity : ComponentActivity() {
           }
         }
       }
+    }
+  }
+
+  @Composable
+  private fun SystemBarsColorEffect(isDarkTheme: Boolean) {
+    val view = LocalView.current
+    LaunchedEffect(isDarkTheme) {
+      val windowInsetsController = window?.let {
+        WindowCompat.getInsetsController(it, view)
+      }
+      windowInsetsController?.isAppearanceLightStatusBars = !isDarkTheme
+      windowInsetsController?.isAppearanceLightNavigationBars = !isDarkTheme
     }
   }
 
