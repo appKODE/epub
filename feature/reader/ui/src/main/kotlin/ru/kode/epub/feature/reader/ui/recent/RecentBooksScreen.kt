@@ -35,7 +35,7 @@ fun RecentBooksScreen(
   viewModel: RecentBooksViewModel
 ) = AppScreen(
   viewModel = viewModel,
-  onBackPress = { },
+  onBackPress = { }
 ) { state ->
   Box(
     modifier = Modifier
@@ -102,7 +102,7 @@ private fun BooksStub(
   )
 }
 
-val BookPreviewCardMinWidth = 160.dp
+val BookPreviewCardMinWidth = 140.dp
 
 private val placeholderBook = Book(
   id = randomUuid(),
