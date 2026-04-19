@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.take
 import ru.kode.epub.core.domain.mapDistinctChanges
 import ru.kode.epub.core.routing.di.FlowComponent
 import ru.kode.epub.core.ui.screen.ViewModel
@@ -34,7 +35,7 @@ fun <T : Any> Value<T>.asFlow(): Flow<T> {
 
 fun Value<ChildStack<*, *>>.screenResultFlow(): Flow<Any> {
   return activeViewModel()
-    .flatMapLatest { it.screenEvents }
+    .flatMapLatest { it.screenEvents.take(1) }
     .filterNotNull()
 }
 

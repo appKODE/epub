@@ -65,9 +65,7 @@ abstract class ViewModel<VS : Any, R : Any> {
   }
 
   protected fun emitResult(result: R) {
-    attachedScope.launch {
-      _screenEvents.emitOnSubscribed(result)
-    }
+    _screenEvents.tryEmit(result)
   }
 
   fun navigateBack() {
