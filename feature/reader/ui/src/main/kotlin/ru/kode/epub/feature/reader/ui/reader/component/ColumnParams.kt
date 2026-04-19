@@ -19,7 +19,7 @@ internal data class ColumnParams(
   val columnCount: Int = 0,
   val screenPageCount: Int = 0,
   val tocAnchorPages: List<Pair<TocAnchor, Int>> = emptyList(),
-  val calculatorPages: List<List<IndexedElement>> = emptyList(),
+  val calculatorPages: List<List<IndexedElement>> = emptyList()
 )
 
 @Composable
@@ -28,7 +28,7 @@ internal fun rememberColumnParams(
   tocAnchors: List<TocAnchor>,
   constraints: Constraints,
   columnMode: ColumnMode?,
-  insets: ReaderInsets,
+  insets: ReaderInsets
 ): ColumnParams {
   val orientation = LocalScreenOrientation.current
   val density = LocalDensity.current
@@ -56,7 +56,6 @@ internal fun rememberColumnParams(
   )
   val screenPageCount = (calculatorPages.size + columnCount - 1) / columnCount
 
-
   // Map each TOC anchor to its screen page index
   val tocAnchorPages = remember(tocAnchors, calculatorPages, columnCount) {
     tocAnchors.mapNotNull { anchor ->
@@ -69,7 +68,7 @@ internal fun rememberColumnParams(
       columnCount = columnCount,
       screenPageCount = screenPageCount,
       calculatorPages = calculatorPages,
-      tocAnchorPages = tocAnchorPages,
+      tocAnchorPages = tocAnchorPages
     )
   }
 }

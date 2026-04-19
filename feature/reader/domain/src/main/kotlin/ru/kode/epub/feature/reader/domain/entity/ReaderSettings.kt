@@ -47,6 +47,11 @@ enum class SelectorSettings(
     displayName = strRef("Text columns"),
     entries = ColumnMode.entries
   ),
+  PageControlsMode(
+    key = "PageControls",
+    displayName = strRef("Page controls"),
+    entries = TurnPageMode.entries
+  ),
 }
 
 enum class NightMode(
@@ -77,6 +82,15 @@ enum class ColumnMode(
   Double(strRef("Double"), "double"),
 }
 
+enum class TurnPageMode(
+  override val displayName: TextRef,
+  override val value: String,
+  override val description: TextRef = emptyTextRef()
+) : ReaderSettings.Entry {
+  TapAndGesture(strRef("Tap and Gesture"), "tapAndGesture"),
+  Gesture(strRef("Gesture"), "gesture"),
+}
+
 fun readerSettings(): List<ReaderSettings> {
   return SelectorSettings.entries.map { setting ->
     ReaderSettings(
@@ -95,5 +109,6 @@ internal fun SelectorSettings.getDefaultValue(): ReaderSettings.Entry {
     SelectorSettings.AppThemeMode -> NightMode.Auto
     SelectorSettings.PageScroll -> PageScrollMode.Horizontal
     SelectorSettings.Columns -> ColumnMode.Double
+    SelectorSettings.PageControlsMode -> TurnPageMode.TapAndGesture
   }
 }

@@ -50,7 +50,6 @@ fun ReaderScreen(
         .fillMaxSize()
         .background(AppTheme.colors.surfaceBackground)
     ) {
-
       val insets = rememberReaderInsets()
 
       val params = rememberColumnParams(
@@ -58,7 +57,7 @@ fun ReaderScreen(
         constraints = constraints,
         columnMode = state.columnMode,
         tocAnchors = state.tocAnchors,
-        insets = insets,
+        insets = insets
       )
 
       val pagerState = rememberPagerState(pageCount = { params.screenPageCount.coerceAtLeast(1) })
@@ -72,10 +71,11 @@ fun ReaderScreen(
               PageContent(
                 state = pagerState,
                 scrollMode = state.scrollMode,
+                turnPageMode = state.turnPageMode,
                 screenPageIndex = scrollIndex,
                 params = params,
                 insets = insets,
-                onToggleTopBar = viewModel::toggleTopBar,
+                onToggleTopBar = viewModel::toggleTopBar
               )
             }
           )
@@ -87,15 +87,15 @@ fun ReaderScreen(
               PageContent(
                 state = pagerState,
                 scrollMode = state.scrollMode,
+                turnPageMode = state.turnPageMode,
                 screenPageIndex = scrollIndex,
                 params = params,
                 insets = insets,
-                onToggleTopBar = viewModel::toggleTopBar,
+                onToggleTopBar = viewModel::toggleTopBar
               )
             }
           )
         }
-
 
         ReaderTopBar(
           visible = state.isTopBarVisible,
@@ -103,7 +103,7 @@ fun ReaderScreen(
           bookInfo = state.bookInfo,
           onBackClick = viewModel::navigateBack,
           onShowBookInfoClick = viewModel::showBookInfo,
-          onShowTocClick = viewModel::showToc,
+          onShowTocClick = viewModel::showToc
         )
 
         ReaderBottomBar(
@@ -112,7 +112,7 @@ fun ReaderScreen(
           params = params,
           onScrollToElement = viewModel::scrollToElement,
           insets = insets,
-          modifier = Modifier.align(Alignment.BottomCenter),
+          modifier = Modifier.align(Alignment.BottomCenter)
         )
 
         ScrollEffects(
@@ -122,7 +122,7 @@ fun ReaderScreen(
           currentElementIndex = state.currentElementIndex,
           scrollToElementIndex = state.scrollToElementIndex,
           onScrollHandled = viewModel::onScrollHandled,
-          onScroll = viewModel::onScroll,
+          onScroll = viewModel::onScroll
         )
       }
       AnimatedVisibility(
@@ -144,7 +144,7 @@ private fun ScrollEffects(
   scrollToElementIndex: Int?,
   onScrollHandled: () -> Unit,
   onScroll: (String, Int) -> Unit,
-  scope: CoroutineScope,
+  scope: CoroutineScope
 ) {
   // TOC / chapter navigation scroll
   LaunchedEffect(scrollToElementIndex, params.calculatorPages) {

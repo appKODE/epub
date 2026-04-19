@@ -29,7 +29,7 @@ internal fun ReaderTopBar(
   bookInfo: BookInfo,
   onBackClick: () -> Unit,
   onShowBookInfoClick: () -> Unit,
-  onShowTocClick: () -> Unit,
+  onShowTocClick: () -> Unit
 ) {
   AnimatedVisibility(
     visible = visible,

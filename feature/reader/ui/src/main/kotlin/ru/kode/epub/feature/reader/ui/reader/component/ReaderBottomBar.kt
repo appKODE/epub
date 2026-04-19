@@ -46,7 +46,7 @@ internal fun ReaderBottomBar(
   params: ColumnParams,
   onScrollToElement: (Int) -> Unit,
   insets: ReaderInsets,
-  modifier: Modifier = Modifier,
+  modifier: Modifier = Modifier
 ) {
   AnimatedVisibility(
     visible = visible,

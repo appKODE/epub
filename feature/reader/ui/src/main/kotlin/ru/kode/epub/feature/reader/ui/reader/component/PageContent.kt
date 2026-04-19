@@ -13,9 +13,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.launch
 import ru.kode.epub.feature.reader.domain.entity.PageScrollMode
+import ru.kode.epub.feature.reader.domain.entity.TurnPageMode
 import ru.kode.epub.feature.reader.ui.reader.ColumnGap
 import ru.kode.epub.feature.reader.ui.reader.ContentItem
 
@@ -23,10 +23,11 @@ import ru.kode.epub.feature.reader.ui.reader.ContentItem
 internal fun PagerScope.PageContent(
   state: PagerState,
   scrollMode: PageScrollMode,
+  turnPageMode: TurnPageMode?,
   screenPageIndex: Int,
   params: ColumnParams,
   insets: ReaderInsets,
-  onToggleTopBar: () -> Unit,
+  onToggleTopBar: () -> Unit
 ) {
   val scope = rememberCoroutineScope()
   Row(
@@ -55,7 +56,7 @@ internal fun PagerScope.PageContent(
               else -> null
             }
           }
-          if (targetPage != null) {
+          if (targetPage != null && turnPageMode == TurnPageMode.TapAndGesture) {
             scope.launch { state.animateScrollToPage(targetPage) }
           } else {
             onToggleTopBar()

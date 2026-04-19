@@ -33,6 +33,7 @@ import ru.kode.epub.feature.reader.domain.entity.ColumnMode
 import ru.kode.epub.feature.reader.domain.entity.NightMode
 import ru.kode.epub.feature.reader.domain.entity.PageScrollMode
 import ru.kode.epub.feature.reader.domain.entity.ReaderSettings
+import ru.kode.epub.feature.reader.domain.entity.TurnPageMode
 import ru.kode.epub.feature.reader.ui.R
 import ru.kode.epub.feature.reader.ui.component.NightModeListItem
 
@@ -54,7 +55,7 @@ fun SettingsScreen(
     LazyColumn(
       modifier = Modifier.fillMaxWidth(),
       contentPadding = PaddingValues(16.dp),
-      horizontalAlignment = Alignment.CenterHorizontally,
+      horizontalAlignment = Alignment.CenterHorizontally
     ) {
       state.settings.forEach { settings ->
         when (settings.selected) {
@@ -67,6 +68,7 @@ fun SettingsScreen(
           }
 
           is ColumnMode,
+          is TurnPageMode,
           is PageScrollMode -> dropDownMenu(
             settings = settings,
             onSelect = { viewModel.apply(settings.copy(selected = it)) }

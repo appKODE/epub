@@ -3,6 +3,7 @@ package ru.kode.epub.feature.reader.ui.reader
 import androidx.compose.runtime.Immutable
 import ru.kode.epub.feature.reader.domain.entity.ColumnMode
 import ru.kode.epub.feature.reader.domain.entity.PageScrollMode
+import ru.kode.epub.feature.reader.domain.entity.TurnPageMode
 import ru.kode.epub.lib.entity.ContentElement
 import ru.kode.epub.lib.entity.EpubFontFile
 import ru.kode.epub.lib.entity.TocEntry
@@ -19,6 +20,7 @@ data class ViewState(
   val currentElementIndex: Int? = null,
   val scrollToElementIndex: Int? = null,
   val scrollMode: PageScrollMode? = null,
+  val turnPageMode: TurnPageMode? = null,
   val columnMode: ColumnMode? = null
 )
 

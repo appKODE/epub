@@ -21,7 +21,7 @@ data class ReaderInsets(
   val statusBarPadding: Dp,
   val bottomPadding: Dp,
   val sideStart: Dp,
-  val sideEnd: Dp,
+  val sideEnd: Dp
 )
 
 @Composable
@@ -42,7 +42,7 @@ internal fun rememberReaderInsets(): ReaderInsets {
       statusBarPadding = statusBarPadding,
       bottomPadding = bottomPadding,
       sideStart = sideStart,
-      sideEnd = sideEnd,
+      sideEnd = sideEnd
     )
   }
 }

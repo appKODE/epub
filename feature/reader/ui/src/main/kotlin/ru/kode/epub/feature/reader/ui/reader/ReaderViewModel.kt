@@ -14,6 +14,7 @@ import ru.kode.epub.feature.reader.domain.ReaderModel
 import ru.kode.epub.feature.reader.domain.entity.Book
 import ru.kode.epub.feature.reader.domain.entity.ColumnMode
 import ru.kode.epub.feature.reader.domain.entity.PageScrollMode
+import ru.kode.epub.feature.reader.domain.entity.TurnPageMode
 import ru.kode.epub.lib.EpubParser
 import ru.kode.epub.lib.entity.EpubBook
 import ru.kode.epub.lib.entity.TocEntry
@@ -59,6 +60,16 @@ class ReaderViewModel @Inject constructor(
       }
       .onEach { scrollMode ->
         stateFlow.update { it.copy(scrollMode = scrollMode) }
+      }
+      .launchIn(viewModelScope)
+
+
+    model.readerSettings
+      .mapNotNull { settings ->
+        settings.find { it.selected is TurnPageMode }?.selected as? TurnPageMode
+      }
+      .onEach { turnPageMode ->
+        stateFlow.update { it.copy(turnPageMode = turnPageMode) }
       }
       .launchIn(viewModelScope)
 
