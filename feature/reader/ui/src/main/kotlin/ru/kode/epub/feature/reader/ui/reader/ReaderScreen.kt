@@ -118,7 +118,7 @@ private fun BookContent(
   Box(
     modifier = Modifier
       .fillMaxSize()
-      .background(AppTheme.colors.surfaceReader)
+      .background(AppTheme.colors.surfaceBackground)
   ) {
     Column(Modifier.fillMaxSize()) {
       ReaderTopBar(

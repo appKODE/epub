@@ -56,7 +56,7 @@ internal fun tocSheet(
 ) = object : ViewEvent.BottomSheet {
   @Composable
   override fun ViewEventHostScope.Content() {
-    ModalBottomSheet(onDismissRequest = ::dismissEventPresentation, containerColor = AppTheme.colors.surfaceReader) {
+    ModalBottomSheet(onDismissRequest = ::dismissEventPresentation) {
       TocSheetContent(
         toc = toc,
         onEntryClick = { chapterIndex ->
@@ -75,7 +75,7 @@ internal fun bookInfoSheet(
 ) = object : ViewEvent.BottomSheet {
   @Composable
   override fun ViewEventHostScope.Content() {
-    ModalBottomSheet(onDismissRequest = ::dismissEventPresentation, containerColor = AppTheme.colors.surfaceReader) {
+    ModalBottomSheet(onDismissRequest = ::dismissEventPresentation) {
       BookInfoSheetContent(
         metadata = metadata,
         coverImage = coverImage,

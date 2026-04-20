@@ -15,7 +15,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import ru.kode.epub.core.uikit.theme.AppTheme
 
@@ -23,7 +22,6 @@ import ru.kode.epub.core.uikit.theme.AppTheme
 fun ModalBottomSheet(
   onDismissRequest: () -> Unit,
   modifier: Modifier = Modifier,
-  containerColor: Color = AppTheme.colors.surfaceLayer1,
   showHandle: Boolean = true,
   sheetContent: @Composable ColumnScope.() -> Unit
 ) {
@@ -34,7 +32,7 @@ fun ModalBottomSheet(
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
   ModalBottomSheet(
     modifier = modifier.padding(top = topPadding),
-    containerColor = containerColor,
+    containerColor = AppTheme.colors.surfaceLayer1,
     shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
     dragHandle = if (showHandle) {
       { BottomSheetHandle() }

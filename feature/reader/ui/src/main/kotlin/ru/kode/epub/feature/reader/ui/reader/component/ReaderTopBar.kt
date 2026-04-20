@@ -69,6 +69,6 @@ internal fun ReaderTopBar(
         )
       }
     },
-    colors = TopAppBarDefaults.topAppBarColors(containerColor = AppTheme.colors.surfaceReader)
+    colors = TopAppBarDefaults.topAppBarColors(containerColor = AppTheme.colors.surfaceBackground)
   )
 }

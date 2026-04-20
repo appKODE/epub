@@ -92,7 +92,7 @@ internal fun ReaderBottomBar(
   val sideEnd = sideInsets.asPaddingValues().calculateEndPadding(layoutDirection)
   Column(
     modifier = modifier
-      .background(AppTheme.colors.surfaceReader)
+      .background(AppTheme.colors.surfaceBackground)
       .disableClickThrough()
       .padding(start = 8.dp + sideStart, end = 8.dp + sideEnd, top = 4.dp, bottom = 4.dp)
   ) {
