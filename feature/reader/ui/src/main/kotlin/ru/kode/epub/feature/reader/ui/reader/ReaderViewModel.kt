@@ -18,7 +18,6 @@ import ru.kode.epub.feature.reader.domain.entity.TurnPageMode
 import ru.kode.epub.lib.EpubParser
 import ru.kode.epub.lib.entity.EpubBook
 import ru.kode.epub.lib.entity.TocEntry
-import timber.log.Timber
 
 @Stable
 class ReaderViewModel @Inject constructor(
@@ -26,15 +25,16 @@ class ReaderViewModel @Inject constructor(
   private val model: ReaderModel,
   @Assisted val book: Book
 ) : ViewModel<ViewState, Unit>() {
-  val epub = EpubParser.parse(context, book.uri)
 
   override fun initialState() = ViewState()
 
   init {
     viewModelScope.launch {
+      val epub = EpubParser.parse(context, book.uri)
       val elements = epub.flattenElements()
       stateFlow.update {
         it.copy(
+          epub = epub,
           loading = false,
           elements = elements,
           toc = epub.toc,
@@ -83,7 +83,6 @@ class ReaderViewModel @Inject constructor(
   }
 
   fun toggleTopBar() {
-    Timber.d("BAR-DBG: toggle bar")
     stateFlow.update { it.copy(isTopBarVisible = !it.isTopBarVisible) }
   }
 
@@ -110,11 +109,11 @@ class ReaderViewModel @Inject constructor(
 
   fun onScroll(key: String, elementIndex: Int) {
     stateFlow.update { it.copy(currentElementIndex = elementIndex) }
-    epub.flattenElements()
     model.updateBookPosition(book.id, key)
   }
 
   private fun selectTocEntry(entry: TocEntry) {
+    val epub = stateFlow.value.epub ?: return
     val baseIndex = epub.chapters.take(entry.chapterIndex).sumOf { it.elements.size }
     val anchorOffset = entry.anchorId
       ?.let { epub.chapters.getOrNull(entry.chapterIndex)?.anchorIndex?.get(it) }

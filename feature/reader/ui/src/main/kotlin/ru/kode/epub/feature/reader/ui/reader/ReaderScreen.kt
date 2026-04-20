@@ -170,7 +170,7 @@ private fun ScrollEffects(
     snapshotFlow { pagerState.layoutInfo }
       .mapDistinctNotNullChanges { info ->
         info.visiblePagesInfo.firstOrNull()?.index?.let { idx ->
-          params.calculatorPages.getOrNull(idx)?.firstOrNull()
+          params.calculatorPages.getOrNull(idx)?.lastOrNull()
         }
       }
       .flowOn(Dispatchers.Default)

@@ -5,11 +5,13 @@ import ru.kode.epub.feature.reader.domain.entity.ColumnMode
 import ru.kode.epub.feature.reader.domain.entity.PageScrollMode
 import ru.kode.epub.feature.reader.domain.entity.TurnPageMode
 import ru.kode.epub.lib.entity.ContentElement
+import ru.kode.epub.lib.entity.EpubBook
 import ru.kode.epub.lib.entity.EpubFontFile
 import ru.kode.epub.lib.entity.TocEntry
 
 @Immutable
 data class ViewState(
+  val epub: EpubBook? = null,
   val loading: Boolean = true,
   val elements: List<IndexedElement> = emptyList(),
   val toc: List<TocEntry> = emptyList(),
