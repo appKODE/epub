@@ -39,6 +39,9 @@ internal object ColorPalette {
   val Yellow300 = Color(0xFFE4B073)
   val Yellow50 = Color(0xFFFBF2E9)
 
+  val Parchment = Color(0xFFF8F1E3)
+  val Ink = Color(0xFF1C1B18)
+
   val Neutral900 = Color(0xFF2D2E32)
   val Neutral800 = Color(0xFF4A4B4F)
   val Neutral700 = Color(0xFF696A6E)

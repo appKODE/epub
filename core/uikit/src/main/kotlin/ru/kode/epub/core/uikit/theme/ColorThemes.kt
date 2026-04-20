@@ -5,6 +5,7 @@ import kotlin.collections.copy
 internal val LightAppColors = AppColors(
   isLight = true,
   surfaceBackground = ColorPalette.Blue100,
+  surfaceReader = ColorPalette.Parchment,
   surfaceLayer1 = ColorPalette.BaseWhite,
   surfaceLayer2 = ColorPalette.Blue100,
   surfaceLayer3 = ColorPalette.BaseWhite,
@@ -75,6 +76,7 @@ internal val LightAppColors = AppColors(
 internal val DarkAppColors = AppColors(
   isLight = false,
   surfaceBackground = ColorPalette.Blue950,
+  surfaceReader = ColorPalette.Ink,
   surfaceLayer1 = ColorPalette.Neutral900,
   surfaceLayer2 = ColorPalette.Neutral800,
   surfaceLayer3 = ColorPalette.Neutral700,

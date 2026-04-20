@@ -1,81 +1,45 @@
 package ru.kode.epub.feature.reader.ui.reader.component
 
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.pager.PagerScope
-import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
-import kotlinx.coroutines.launch
-import ru.kode.epub.feature.reader.domain.entity.PageScrollMode
-import ru.kode.epub.feature.reader.domain.entity.TurnPageMode
-import ru.kode.epub.feature.reader.ui.reader.ColumnGap
-import ru.kode.epub.feature.reader.ui.reader.ContentItem
+import androidx.compose.ui.text.font.FontFamily
+import ru.kode.epub.feature.reader.ui.reader.LocalAvailableWidth
+import ru.kode.epub.feature.reader.ui.reader.PAGE_HORIZONTAL_PADDING
+import ru.kode.epub.feature.reader.ui.reader.PAGE_VERTICAL_PADDING
+import ru.kode.epub.feature.reader.ui.reader.Page
 
 @Composable
-internal fun PagerScope.PageContent(
-  state: PagerState,
-  scrollMode: PageScrollMode,
-  turnPageMode: TurnPageMode?,
+internal fun PageContent(
+  pages: List<Page>,
+  columnCount: Int,
   screenPageIndex: Int,
-  params: ColumnParams,
-  insets: ReaderInsets,
-  onToggleTopBar: () -> Unit
+  fontFamilyMap: Map<String, FontFamily>,
+  modifier: Modifier = Modifier
 ) {
-  val scope = rememberCoroutineScope()
-  Row(
-    modifier = Modifier
-      .fillMaxSize()
-      .pointerInput(scrollMode) {
-        detectTapGestures { offset ->
-          val targetPage = when (scrollMode) {
-            PageScrollMode.Horizontal -> when {
-              offset.x < size.width * 0.2f ->
-                (state.currentPage - 1).takeIf { it >= 0 }
-
-              offset.x > size.width * 0.8f ->
-                (state.currentPage + 1).takeIf { it < state.pageCount }
-
-              else -> null
-            }
-
-            PageScrollMode.Vertical -> when {
-              offset.y < size.height * 0.2f ->
-                (state.currentPage - 1).takeIf { it >= 0 }
-
-              offset.y > size.height * 0.8f ->
-                (state.currentPage + 1).takeIf { it < state.pageCount }
-
-              else -> null
+  Row(modifier) {
+    repeat(columnCount) { colIdx ->
+      BoxWithConstraints(
+        modifier = Modifier
+          .weight(1f)
+          .fillMaxSize()
+      ) {
+        CompositionLocalProvider(LocalAvailableWidth provides maxWidth - PAGE_HORIZONTAL_PADDING * 2) {
+          Column(
+            modifier = Modifier
+              .fillMaxSize()
+              .padding(horizontal = PAGE_HORIZONTAL_PADDING, vertical = PAGE_VERTICAL_PADDING)
+          ) {
+            val calcIdx = screenPageIndex * columnCount + colIdx
+            pages.getOrElse(calcIdx) { Page(emptyList()) }.items.forEach { indexed ->
+              NodeContent(node = indexed.node, fontFamilyMap = fontFamilyMap)
             }
           }
-          if (targetPage != null && turnPageMode == TurnPageMode.TapAndGesture) {
-            scope.launch { state.animateScrollToPage(targetPage) }
-          } else {
-            onToggleTopBar()
-          }
-        }
-      }
-      .padding(
-        top = insets.statusBarPadding,
-        bottom = insets.bottomPadding,
-        start = insets.sideStart,
-        end = insets.sideEnd
-      )
-  ) {
-    repeat(params.columnCount) { colIdx ->
-      if (colIdx > 0) Spacer(Modifier.width(ColumnGap))
-      Column(modifier = Modifier.weight(1f)) {
-        val calcIdx = screenPageIndex * params.columnCount + colIdx
-        params.calculatorPages.getOrElse(calcIdx) { emptyList() }.forEach { indexed ->
-          ContentItem(indexed.element)
         }
       }
     }

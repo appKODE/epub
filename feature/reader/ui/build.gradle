@@ -9,6 +9,7 @@ dependencies {
   implementation project(":feature:reader:domain")
   implementation project(":lib:epub")
   implementation libs.androidx.activity.ktx
+  implementation libs.coil.compose
 }
 
 android {

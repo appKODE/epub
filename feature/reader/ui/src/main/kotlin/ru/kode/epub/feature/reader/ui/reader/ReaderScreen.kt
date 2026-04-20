@@ -4,134 +4,245 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import ru.kode.epub.core.domain.entity.ScreenOrientation
 import ru.kode.epub.core.domain.mapDistinctNotNullChanges
+import ru.kode.epub.core.ui.compose.LocalScreenOrientation
 import ru.kode.epub.core.ui.screen.AppScreen
 import ru.kode.epub.core.uikit.component.CircularLoaderWithOverlay
 import ru.kode.epub.core.uikit.theme.AppTheme
+import ru.kode.epub.feature.reader.domain.entity.ColumnMode
 import ru.kode.epub.feature.reader.domain.entity.PageScrollMode
+import ru.kode.epub.feature.reader.domain.entity.TurnPageMode
 import ru.kode.epub.feature.reader.ui.bottombar.BottomBarStateRestoreEffect
-import ru.kode.epub.feature.reader.ui.reader.component.ColumnParams
 import ru.kode.epub.feature.reader.ui.reader.component.PageContent
 import ru.kode.epub.feature.reader.ui.reader.component.ReaderBottomBar
 import ru.kode.epub.feature.reader.ui.reader.component.ReaderTopBar
-import ru.kode.epub.feature.reader.ui.reader.component.rememberColumnParams
-import ru.kode.epub.feature.reader.ui.reader.component.rememberReaderInsets
+import ru.kode.epub.lib.entity.Book
 
-@Suppress("CyclomaticComplexMethod")
 @Composable
-fun ReaderScreen(
-  viewModel: ReaderViewModel
-) = AppScreen(viewModel) { state ->
-  val fontFamily = rememberEpubFontFamily(state.fontFiles)
-
+fun ReaderScreen(viewModel: ReaderViewModel) = AppScreen(viewModel) { state ->
   BottomBarStateRestoreEffect(visible = false)
 
-  CompositionLocalProvider(LocalEpubFontFamily provides fontFamily) {
-    BoxWithConstraints(
-      modifier = Modifier
-        .fillMaxSize()
-        .background(AppTheme.colors.surfaceBackground)
-    ) {
-      val insets = rememberReaderInsets()
+  state.book?.let {
+    BookContent(
+      book = it,
+      fontFamilyMap = state.fontFamilyMap,
+      scrollMode = state.scrollMode,
+      columnMode = state.columnMode,
+      turnPageMode = state.turnPageMode,
+      scrollToElementIndex = state.scrollToElementIndex,
+      currentElementIndex = state.currentElementIndex,
+      onBack = viewModel::navigateBack,
+      onShowBookInfo = viewModel::showBookInfo,
+      onShowToc = viewModel::showToc,
+      onScrollHandled = viewModel::onScrollHandled,
+      onPageChanged = viewModel::onPageChanged
+    )
+  }
+  AnimatedVisibility(
+    visible = state.loading,
+    enter = fadeIn(),
+    exit = fadeOut()
+  ) {
+    CircularLoaderWithOverlay(modifier = Modifier.fillMaxSize())
+  }
+}
 
-      val params = rememberColumnParams(
-        elements = state.elements,
-        constraints = constraints,
-        columnMode = state.columnMode,
-        tocAnchors = state.tocAnchors,
-        insets = insets
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BookContent(
+  book: Book,
+  fontFamilyMap: Map<String, FontFamily>,
+  scrollMode: PageScrollMode?,
+  columnMode: ColumnMode?,
+  turnPageMode: TurnPageMode?,
+  scrollToElementIndex: Int?,
+  currentElementIndex: Int?,
+  onBack: () -> Unit,
+  onShowBookInfo: () -> Unit,
+  onShowToc: () -> Unit,
+  onScrollHandled: () -> Unit,
+  onPageChanged: (chapterIndex: Int, relativeIndex: Int, globalIndex: Int) -> Unit
+) {
+  val density = LocalDensity.current
+  val textMeasurer = rememberTextMeasurer()
+  val orientation = LocalScreenOrientation.current
+  val coroutineScope = rememberCoroutineScope()
+
+  val columnCount = if (columnMode == ColumnMode.Double && orientation == ScreenOrientation.Landscape) 2 else 1
+
+  var pages by remember { mutableStateOf<List<Page>>(emptyList()) }
+  val screenPageCount = (pages.size + columnCount - 1) / columnCount
+  val pagerState = rememberPagerState(pageCount = { screenPageCount.coerceAtLeast(1) })
+
+  Box(
+    modifier = Modifier
+      .fillMaxSize()
+      .background(AppTheme.colors.surfaceReader)
+  ) {
+    Column(Modifier.fillMaxSize()) {
+      ReaderTopBar(
+        metadata = book.metadata,
+        onBackClick = onBack,
+        onShowBookInfoClick = onShowBookInfo,
+        onShowBookTocClick = onShowToc
       )
+      HorizontalDivider(color = AppTheme.colors.borderRegular)
 
-      val pagerState = rememberPagerState(pageCount = { params.screenPageCount.coerceAtLeast(1) })
-
-      if (state.scrollMode != null && state.columnMode != null && params.calculatorPages.isNotEmpty()) {
-        when (state.scrollMode) {
-          PageScrollMode.Horizontal -> HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize(),
-            pageContent = { scrollIndex ->
-              PageContent(
-                state = pagerState,
-                scrollMode = state.scrollMode,
-                turnPageMode = state.turnPageMode,
-                screenPageIndex = scrollIndex,
-                params = params,
-                insets = insets,
-                onToggleTopBar = viewModel::toggleTopBar
-              )
-            }
-          )
-
-          PageScrollMode.Vertical -> VerticalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize(),
-            pageContent = { scrollIndex ->
-              PageContent(
-                state = pagerState,
-                scrollMode = state.scrollMode,
-                turnPageMode = state.turnPageMode,
-                screenPageIndex = scrollIndex,
-                params = params,
-                insets = insets,
-                onToggleTopBar = viewModel::toggleTopBar
-              )
-            }
+      // Page content area: side insets accounted here; bottom is handled by the bottom bar
+      BoxWithConstraints(
+        modifier = Modifier
+          .weight(1f)
+          .padding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal).asPaddingValues())
+      ) {
+        // Each column width = half screen (÷ columnCount) minus page horizontal padding on both sides
+        val widthPx = with(density) {
+          (maxWidth / columnCount - PAGE_HORIZONTAL_PADDING * 2).roundToPx().coerceAtLeast(
+            1
           )
         }
+        val heightPx = with(density) { (maxHeight - PAGE_VERTICAL_PADDING * 2).roundToPx().coerceAtLeast(1) }
 
-        ReaderTopBar(
-          visible = state.isTopBarVisible,
-          showTocButton = state.toc.isNotEmpty(),
-          bookInfo = state.bookInfo,
-          onBackClick = viewModel::navigateBack,
-          onShowBookInfoClick = viewModel::showBookInfo,
-          onShowTocClick = viewModel::showToc
-        )
+        LaunchedEffect(book, widthPx, heightPx) {
+          if (widthPx > 0 && heightPx > 0) {
+            pages = withContext(Dispatchers.Default) {
+              calculatePages(
+                book = book,
+                pageWidthPx = widthPx,
+                pageHeightPx = heightPx,
+                textMeasurer = textMeasurer,
+                density = density,
+                fontFamilyMap = fontFamilyMap
+              )
+            }
+          }
+        }
 
-        ReaderBottomBar(
-          visible = state.isTopBarVisible && params.calculatorPages.isNotEmpty(),
-          pagerState = pagerState,
-          params = params,
-          onScrollToElement = viewModel::scrollToElement,
-          insets = insets,
-          modifier = Modifier.align(Alignment.BottomCenter)
-        )
+        val tapModifier = if (turnPageMode == TurnPageMode.TapAndGesture) {
+          Modifier.pointerInput(scrollMode, turnPageMode) {
+            detectTapGestures { offset ->
+              val targetPage = when (scrollMode) {
+                PageScrollMode.Horizontal -> when {
+                  offset.x < size.width * 0.2f -> (pagerState.currentPage - 1).takeIf { it >= 0 }
+                  offset.x > size.width * 0.8f -> (pagerState.currentPage + 1).takeIf { it < pagerState.pageCount }
+                  else -> null
+                }
 
-        ScrollEffects(
-          pagerState = pagerState,
-          scope = viewModel.viewModelScope,
-          params = params,
-          currentElementIndex = state.currentElementIndex,
-          scrollToElementIndex = state.scrollToElementIndex,
-          onScrollHandle = viewModel::onScrollHandled,
-          onScroll = viewModel::onScroll
-        )
+                else -> when {
+                  offset.y < size.height * 0.2f -> (pagerState.currentPage - 1).takeIf { it >= 0 }
+                  offset.y > size.height * 0.8f -> (pagerState.currentPage + 1).takeIf { it < pagerState.pageCount }
+                  else -> null
+                }
+              }
+              if (targetPage != null) coroutineScope.launch { pagerState.animateScrollToPage(targetPage) }
+            }
+          }
+        } else {
+          Modifier
+        }
+
+        if (scrollMode == PageScrollMode.Horizontal) {
+          HorizontalPager(
+            state = pagerState,
+            modifier = Modifier
+              .fillMaxSize()
+              .then(tapModifier)
+          ) { index ->
+            PageContent(
+              modifier = Modifier.fillMaxSize(),
+              pages = pages,
+              columnCount = columnCount,
+              screenPageIndex = index,
+              fontFamilyMap = fontFamilyMap
+            )
+          }
+        } else {
+          VerticalPager(
+            state = pagerState,
+            modifier = Modifier
+              .fillMaxSize()
+              .then(tapModifier)
+          ) { index ->
+            PageContent(
+              modifier = Modifier.fillMaxSize(),
+              pages = pages,
+              columnCount = columnCount,
+              screenPageIndex = index,
+              fontFamilyMap = fontFamilyMap
+            )
+          }
+        }
       }
-      AnimatedVisibility(
-        visible = state.loading,
-        enter = fadeIn(),
-        exit = fadeOut()
-      ) {
-        CircularLoaderWithOverlay(modifier = Modifier.fillMaxSize())
-      }
+
+      HorizontalDivider(color = AppTheme.colors.borderRegular)
+      ReaderBottomBar(
+        pagerState = pagerState,
+        toc = book.toc,
+        pages = pages,
+        columnCount = columnCount,
+        totalPages = screenPageCount,
+        onPageSelected = { page -> coroutineScope.launch { pagerState.scrollToPage(page) } },
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())
+      )
+
+      ScrollEffects(
+        pagerState = pagerState,
+        pages = pages,
+        columnCount = columnCount,
+        currentElementIndex = currentElementIndex,
+        scrollToElementIndex = scrollToElementIndex,
+        onScrollHandled = onScrollHandled,
+        onPageChanged = onPageChanged
+      )
+    }
+    AnimatedVisibility(
+      visible = pages.isEmpty(),
+      enter = fadeIn(),
+      exit = fadeOut()
+    ) {
+      CircularLoaderWithOverlay(modifier = Modifier.fillMaxSize())
     }
   }
 }
@@ -139,44 +250,49 @@ fun ReaderScreen(
 @Composable
 private fun ScrollEffects(
   pagerState: PagerState,
-  params: ColumnParams,
+  pages: List<Page>,
+  columnCount: Int,
   currentElementIndex: Int?,
   scrollToElementIndex: Int?,
-  onScrollHandle: () -> Unit,
-  onScroll: (String, Int) -> Unit,
-  scope: CoroutineScope
+  onScrollHandled: () -> Unit,
+  onPageChanged: (chapterIndex: Int, relativeIndex: Int, globalIndex: Int) -> Unit
 ) {
-  // TOC / chapter navigation scroll
-  LaunchedEffect(scrollToElementIndex, params.calculatorPages) {
-    scrollToElementIndex?.let { targetIndex ->
-      val calcIdx = params.calculatorPages.indexOfFirst { page -> page.any { it.index == targetIndex } }
-      if (calcIdx >= 0) pagerState.scrollToPage(calcIdx / params.columnCount)
-      onScrollHandle()
+  // Restore saved position when book is first opened
+  LaunchedEffect(scrollToElementIndex, pages) {
+    if (scrollToElementIndex != null && pages.isNotEmpty()) {
+      val targetCalcPage = pages.indexOfLast { page -> page.items.any { it.index == scrollToElementIndex } }
+      if (targetCalcPage >= 0) pagerState.scrollToPage(targetCalcPage / columnCount)
+      onScrollHandled()
     }
   }
 
-  // Restore position after config change (pagerState resets to 0)
-  LaunchedEffect(params.calculatorPages, params.columnCount) {
-    if (params.calculatorPages.isNotEmpty() && pagerState.currentPage == 0) {
+  // Restore position after config change (e.g. screen rotation resets pagerState to 0)
+  LaunchedEffect(pages, columnCount) {
+    if (pages.isNotEmpty() && pagerState.currentPage == 0) {
       currentElementIndex?.let { savedIndex ->
-        val calcIdx = params.calculatorPages.indexOfFirst { page -> page.any { it.index == savedIndex } }
-        if (calcIdx > 0) pagerState.scrollToPage(calcIdx / params.columnCount)
+        val calcIdx = pages.indexOfFirst { page -> page.items.any { it.index == savedIndex } }
+        if (calcIdx > 0) pagerState.scrollToPage(calcIdx / columnCount)
       }
     }
   }
 
-  // Save position on page change
+  val currentPages by rememberUpdatedState(pages)
+  val currentColumnCount by rememberUpdatedState(columnCount)
+
   LaunchedEffect(Unit) {
     snapshotFlow { pagerState.layoutInfo }
       .mapDistinctNotNullChanges { info ->
-        info.visiblePagesInfo.firstOrNull()?.index?.let { idx ->
-          params.calculatorPages.getOrNull(idx)?.lastOrNull()
+        info.visiblePagesInfo.firstOrNull()?.index?.let { screenPageIdx ->
+          currentPages.getOrNull(screenPageIdx * currentColumnCount)?.items?.lastOrNull()
         }
       }
       .flowOn(Dispatchers.Default)
-      .onEach { element -> onScroll(element.key, element.index) }
-      .launchIn(scope)
+      .onEach { lastNode ->
+        onPageChanged(lastNode.chapterIndex, lastNode.relativeIndex, lastNode.index)
+      }
+      .launchIn(this)
   }
 }
 
-internal val ColumnGap = 32.dp
+internal val PAGE_HORIZONTAL_PADDING = 16.dp
+internal val PAGE_VERTICAL_PADDING = 8.dp

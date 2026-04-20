@@ -1,437 +1,501 @@
 package ru.kode.epub.feature.reader.ui.reader
 
 import android.graphics.BitmapFactory
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.Hyphens
-import androidx.compose.ui.text.style.LineBreak
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.times
-import ru.kode.epub.core.uikit.theme.AppTheme
-import ru.kode.epub.lib.entity.ContentElement
-import ru.kode.epub.lib.entity.EpubTextAlign
-import ru.kode.epub.lib.entity.StyledText
-import ru.kode.epub.lib.entity.TextSpan
+import ru.kode.epub.lib.entity.Book
+import ru.kode.epub.lib.entity.Node
+import ru.kode.epub.lib.entity.PageBreak
+import ru.kode.epub.lib.entity.Span
+import ru.kode.epub.lib.entity.Style
 
-@Composable
-fun rememberPageBreaks(
-  elements: List<IndexedElement>,
-  contentHeightPx: Int,
-  contentWidthPx: Int
-): List<List<IndexedElement>> {
-  val textMeasurer = rememberTextMeasurer()
-  val density = LocalDensity.current
-  val fontFamily = LocalEpubFontFamily.current
+/**
+ * A block-level node with its position indices assigned during page calculation.
+ * [index] is the global index across all chapters (used for progress save/restore).
+ * [relativeIndex] is the index within the owning chapter's flattened block list.
+ * [chapterIndex] is the index of the chapter this node belongs to.
+ */
+data class IndexedNode(
+  val index: Int,
+  val relativeIndex: Int,
+  val chapterIndex: Int,
+  val node: Node
+)
 
-  val h2 = AppTheme.typography.headline2
-  val h3 = AppTheme.typography.headline3
-  val h4 = AppTheme.typography.headline4
-  val h5 = AppTheme.typography.headline5
-  val subhead = AppTheme.typography.subhead1
-  val body = AppTheme.typography.body1
+/**
+ * A single rendered page: flat list of block-level indexed nodes and the chapter it belongs to.
+ */
+data class Page(val items: List<IndexedNode>, val chapterIndex: Int = 0)
 
-  return remember(elements, contentHeightPx, contentWidthPx, fontFamily) {
-    if (contentHeightPx <= 0 || contentWidthPx <= 0) return@remember emptyList()
-    buildPages(
-      elements = elements,
-      pageHeightPx = contentHeightPx,
-      contentWidthPx = contentWidthPx,
-      fontFamily = fontFamily,
-      headlineStyles = mapOf(1 to h2, 2 to h3, 3 to h4, 4 to h5),
-      subheadStyle = subhead,
-      bodyStyle = body,
-      textMeasurer = textMeasurer,
-      density = density
-    )
+// CSS-default values for orphans and widows
+private const val DEFAULT_ORPHANS = 2
+private const val DEFAULT_WIDOWS = 2
+
+// ─────────────────────────── Block flattening ─────────────────────────────────
+
+private val BLOCK_ELEMENT_TAGS = setOf(
+  "p", "h1", "h2", "h3", "h4", "h5", "h6",
+  "blockquote", "pre", "figure", "figcaption",
+  "dl", "dt", "dd", "aside", "header", "footer"
+)
+
+private val CONTAINER_TAGS = setOf(
+  "div",
+  "section",
+  "article",
+  "nav",
+  "main",
+  "body"
+)
+
+/**
+ * Recursively flattens a node list to leaf block elements suitable for pagination.
+ * Container divs/sections are unwrapped; typed block nodes (BulletList, Table, HorizontalRule)
+ * and named block elements are kept as-is.
+ */
+internal fun List<Node>.flattenToBlocks(): List<Node> {
+  val result = mutableListOf<Node>()
+  for (node in this) {
+    when {
+      node is Node.Image -> result.add(node)
+      node is Node.HorizontalRule -> result.add(node)
+      node is Node.BulletList -> result.add(node)
+      node is Node.Table -> result.add(node)
+      node is Node.Text -> if (node.raw.isNotBlank()) result.add(node)
+      node is Node.Element && node.tag in BLOCK_ELEMENT_TAGS -> result.add(node)
+      node is Node.Element && node.tag in CONTAINER_TAGS -> {
+        // Keep the container as a block if it carries visual styles (border, background),
+        // so applyStyle() can render them. Otherwise just unwrap its children.
+        if (node.style.hasVisualBox()) result.add(node)
+        else result.addAll(node.children.flattenToBlocks())
+      }
+      node is Node.Element -> {
+        // Unknown tag: if it has block children, unwrap; otherwise keep
+        val hasBlockChildren = node.children.any {
+          it is Node.Element && (it.tag in BLOCK_ELEMENT_TAGS || it.tag in CONTAINER_TAGS) ||
+            it is Node.BulletList || it is Node.Table || it is Node.HorizontalRule
+        }
+        if (hasBlockChildren) result.addAll(node.children.flattenToBlocks()) else result.add(node)
+      }
+    }
   }
+  return result
 }
 
-// ─────────────────────────── Result types ───────────────────────────────────
+// ─────────────────────────── Main entry point ────────────────────────────────
 
-private sealed interface SplitElementResult {
-  /** Element was split: put [first] on current page, queue [continuation] for the next. */
-  data class Split(val first: IndexedElement, val continuation: IndexedElement) : SplitElementResult
-
-  /** TextMeasurer overestimated height — element actually fits on the current page as-is. */
-  data object FitsAfterAll : SplitElementResult
-}
-
-private sealed interface SplitTextResult {
-  data class Split(val first: StyledText, val second: StyledText) : SplitTextResult
-  data object AllFit : SplitTextResult
-  data object NothingFits : SplitTextResult
-}
-
-// ─────────────────────────── Core algorithm ─────────────────────────────────
-@Suppress("NestedBlockDepth")
-private fun buildPages(
-  elements: List<IndexedElement>,
+/**
+ * Paginates the entire [book] into a list of [Page] objects.
+ *
+ * - Each chapter always starts on a new page.
+ * - `page-break-before: always` forces a new page before the element.
+ * - Text paragraphs straddling a page boundary are split at a line boundary.
+ * - A hyphen is appended when the split falls inside a word.
+ * - CSS `orphans` and `widows` are respected: the split point may be adjusted
+ *   to guarantee the minimum number of lines on each side of the break.
+ *
+ * No horizontal padding is added here — that must come from element CSS styles.
+ */
+internal fun calculatePages(
+  book: Book,
+  pageWidthPx: Int,
   pageHeightPx: Int,
-  contentWidthPx: Int,
-  fontFamily: FontFamily,
-  headlineStyles: Map<Int, TextStyle>,
-  subheadStyle: TextStyle,
-  bodyStyle: TextStyle,
   textMeasurer: TextMeasurer,
-  density: Density
-): List<List<IndexedElement>> {
-  val pages = mutableListOf<MutableList<IndexedElement>>()
-  var currentPage = mutableListOf<IndexedElement>()
-  var usedHeightPx = 0
+  density: Density,
+  fontFamilyMap: Map<String, FontFamily>
+): List<Page> {
+  if (pageWidthPx <= 0 || pageHeightPx <= 0) return listOf(Page(emptyList()))
 
-  val queue = ArrayDeque<IndexedElement>()
-  queue.addAll(elements)
+  val pages = mutableListOf<Page>()
+  var currentItems = mutableListOf<IndexedNode>()
+  var usedHeight = 0
+  var currentChapterIndex = 0
+  // Global block index counter — increments once per original block (before any split)
+  var globalIndex = 0
 
-  while (queue.isNotEmpty()) {
-    val indexed = queue.removeFirst()
+  fun flushPage() {
+    pages.add(Page(currentItems.toList(), currentChapterIndex))
+    currentItems = mutableListOf()
+    usedHeight = 0
+  }
 
-    if (indexed.isChapterStart && currentPage.isNotEmpty()) {
-      pages.add(currentPage)
-      currentPage = mutableListOf()
-      usedHeightPx = 0
-    }
+  for ((chapterIndex, chapter) in book.chapters.withIndex()) {
+    if (currentItems.isNotEmpty()) flushPage()
+    currentChapterIndex = chapterIndex
 
-    val elementHeight = measureElementHeight(
-      element = indexed.element,
-      contentWidthPx = contentWidthPx,
-      fontFamily = fontFamily,
-      headlineStyles = headlineStyles,
-      subheadStyle = subheadStyle,
-      bodyStyle = bodyStyle,
-      textMeasurer = textMeasurer,
-      density = density
-    )
-    val available = pageHeightPx - usedHeightPx
+    for ((blockIdx, block) in chapter.nodes.flattenToBlocks().withIndex()) {
+      // Assign a stable global index to this original block (both split halves share it)
+      val nodeIndex = globalIndex++
 
-    if (elementHeight <= available) {
-      currentPage.add(indexed)
-      usedHeightPx += elementHeight
-    } else {
-      when (
-        val result = trySplitElement(
-          indexed = indexed,
-          availableHeightPx = available,
-          contentWidthPx = contentWidthPx,
-          fontFamily = fontFamily,
-          bodyStyle = bodyStyle,
-          textMeasurer = textMeasurer,
-          density = density
-        )
-      ) {
-        is SplitElementResult.Split -> {
-          currentPage.add(result.first)
-          pages.add(currentPage)
-          currentPage = mutableListOf()
-          usedHeightPx = 0
-          queue.addFirst(result.continuation)
+      // Force page break before element if CSS requests it
+      if (block.pageBreakBefore() == PageBreak.Always && currentItems.isNotEmpty()) {
+        flushPage()
+      }
+
+      val blockHeight = measureNodeHeight(block, pageWidthPx, textMeasurer, density, fontFamilyMap)
+      val remaining = pageHeightPx - usedHeight
+
+      when {
+        // Oversized block that alone exceeds the page — place it on its own page
+        usedHeight == 0 && blockHeight >= pageHeightPx -> {
+          currentItems.add(IndexedNode(nodeIndex, blockIdx, chapterIndex, block))
+          flushPage()
         }
-        SplitElementResult.FitsAfterAll -> {
-          // TextMeasurer overestimated — element actually fits
-          currentPage.add(indexed)
-          usedHeightPx += elementHeight
+        // Block fits in remaining space
+        blockHeight <= remaining -> {
+          currentItems.add(IndexedNode(nodeIndex, blockIdx, chapterIndex, block))
+          usedHeight += blockHeight
         }
-        null -> when {
-          currentPage.isEmpty() -> {
-            // Unsplittable element larger than a full page — add anyway
-            currentPage.add(indexed)
-            usedHeightPx += elementHeight
-          }
-          else -> {
-            // Nothing fits on current page — close and retry
-            pages.add(currentPage)
-            currentPage = mutableListOf()
-            usedHeightPx = 0
-            queue.addFirst(indexed)
+        // Block doesn't fit — try splitting
+        else -> {
+          val split = if (remaining > 0) {
+            trySplitParagraph(block, pageWidthPx, remaining, textMeasurer, density, fontFamilyMap)
+          } else null
+
+          if (split != null) {
+            if (!split.first.isEmpty()) currentItems.add(IndexedNode(nodeIndex, blockIdx, chapterIndex, split.first))
+            flushPage()
+            currentItems.add(IndexedNode(nodeIndex, blockIdx, chapterIndex, split.second))
+            usedHeight = measureNodeHeight(split.second, pageWidthPx, textMeasurer, density, fontFamilyMap)
+          } else {
+            // Can't split — push to next page
+            flushPage()
+            currentItems.add(IndexedNode(nodeIndex, blockIdx, chapterIndex, block))
+            usedHeight = blockHeight
           }
         }
       }
     }
   }
 
-  if (currentPage.isNotEmpty()) pages.add(currentPage)
-  return pages
+  if (currentItems.isNotEmpty()) flushPage()
+  return pages.ifEmpty { listOf(Page(emptyList())) }
 }
 
-// ─────────────────────────── Splitting ──────────────────────────────────────
+// ─────────────────────────── Measurement ─────────────────────────────────────
 
-private fun trySplitElement(
-  indexed: IndexedElement,
-  availableHeightPx: Int,
-  contentWidthPx: Int,
-  fontFamily: FontFamily,
-  bodyStyle: TextStyle,
+internal fun measureNodeHeight(
+  node: Node,
+  availableWidthPx: Int,
   textMeasurer: TextMeasurer,
-  density: Density
-): SplitElementResult? = with(density) {
-  when (val element = indexed.element) {
-    is ContentElement.Paragraph -> {
-      val css = element.styles
-      val style = bodyStyle.copy(
-        fontFamily = fontFamily,
-        lineHeight = 26.sp,
-        textIndent = TextIndent(firstLine = (css.textIndentEm ?: 1f) * 16.sp),
-        textAlign = css.textAlign?.toComposeAlign() ?: TextAlign.Justify,
-        hyphens = Hyphens.Auto,
-        lineBreak = LineBreak.Paragraph,
-        fontStyle = css.italic?.toFontStyle() ?: FontStyle.Normal,
-        fontWeight = css.bold?.toFontWeight() ?: FontWeight.Normal
-      )
-      val paddingStartPx = css.paddingStart.toDp(default = 16.dp).roundToPx()
-      val paddingEndPx = css.paddingEnd.toDp(default = 16.dp).roundToPx()
-      val paddingTopPx = css.paddingTop.toDp(default = 0.dp).roundToPx()
-      val paddingBottomPx = css.paddingBottom.toDp(default = 0.dp).roundToPx()
-      val textWidthPx = (contentWidthPx - paddingStartPx - paddingEndPx).coerceAtLeast(0)
-      val marginTopPx = css.marginTop.toDp(default = 0.dp).roundToPx()
-      val marginBottomPx = css.marginBottom.toDp(default = PARAGRAPH_MARGIN_BOTTOM_DEFAULT).roundToPx()
-      val textAvailable = availableHeightPx - marginTopPx - marginBottomPx - paddingTopPx - paddingBottomPx
+  density: Density,
+  fontFamilyMap: Map<String, FontFamily>
+): Int = when (node) {
+  is Node.Text -> {
+    val annotated = node.toAnnotatedString()
+    textMeasurer.measure(
+      text = annotated,
+      style = TextStyle.Default.copy(hyphens = Hyphens.Auto),
+      constraints = Constraints.fixedWidth(availableWidthPx.coerceAtLeast(1))
+    ).size.height
+  }
+  is Node.Image -> measureImageHeight(node, availableWidthPx)?.plus(node.style.verticalSpacingPx(density)) ?: 0
+  is Node.HorizontalRule -> with(density) { 16.dp.roundToPx() }
+  is Node.BulletList -> measureBulletListHeight(node, availableWidthPx, textMeasurer, density, fontFamilyMap)
+  is Node.Table -> measureTableHeight(node, availableWidthPx, textMeasurer, density, fontFamilyMap)
+  is Node.Element -> measureElementHeight(node, availableWidthPx, textMeasurer, density, fontFamilyMap)
+}
 
-      when (
-        val textResult = splitTextToHeight(
-          text = element.text,
-          style = style,
-          widthPx = textWidthPx,
-          availableHeightPx = textAvailable,
-          textMeasurer = textMeasurer
-        )
-      ) {
-        is SplitTextResult.Split -> SplitElementResult.Split(
-          first = indexed.copy(element = element.copy(text = textResult.first)),
-          continuation = indexed.copy(
-            key = "${indexed.key}-c",
-            element = element.copy(
-              text = textResult.second.trimLeadingWhitespace(),
-              styles = css.copy(textIndentEm = 0f, marginTop = null)
-            )
-          )
-        )
-        SplitTextResult.AllFit -> SplitElementResult.FitsAfterAll
-        SplitTextResult.NothingFits -> null
-      }
-    }
-
-    is ContentElement.Quote -> {
-      val css = element.styles
-      val style = bodyStyle.copy(
-        fontFamily = fontFamily,
-        lineHeight = 26.sp,
-        fontStyle = css.italic?.toFontStyle() ?: FontStyle.Normal
-      )
-      val marginTopPx = css.marginTop.toDp(default = QUOTE_MARGIN_TOP_DEFAULT).roundToPx()
-      val marginBottomPx = css.marginBottom.toDp(default = QUOTE_MARGIN_BOTTOM_DEFAULT).roundToPx()
-      val marginStartPx = css.marginStart.toDp(default = QUOTE_MARGIN_START_DEFAULT).roundToPx()
-      val quoteWidthPx = (contentWidthPx - marginStartPx).coerceAtLeast(contentWidthPx / 2)
-      val textAvailable = availableHeightPx - marginTopPx - marginBottomPx
-
-      when (
-        val textResult = splitTextToHeight(
-          text = element.text,
-          style = style,
-          widthPx = quoteWidthPx,
-          availableHeightPx = textAvailable,
-          textMeasurer = textMeasurer
-        )
-      ) {
-        is SplitTextResult.Split -> SplitElementResult.Split(
-          first = indexed.copy(element = element.copy(text = textResult.first)),
-          continuation = indexed.copy(
-            key = "${indexed.key}-c",
-            element = element.copy(
-              text = textResult.second.trimLeadingWhitespace(),
-              styles = css.copy(marginTop = null)
-            )
-          )
-        )
-        SplitTextResult.AllFit -> SplitElementResult.FitsAfterAll
-        SplitTextResult.NothingFits -> null
-      }
-    }
-
-    // Headings stay whole — move to next page if they don't fit
-    is ContentElement.Heading -> null
-    is ContentElement.EpubImage -> null
+private fun measureImageHeight(node: Node.Image, availableWidthPx: Int): Int? {
+  val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+  BitmapFactory.decodeByteArray(node.data, 0, node.data.size, opts)
+  return if (opts.outWidth > 0 && opts.outHeight > 0) {
+    val heightPx = opts.outHeight.toFloat()
+    val aspectRatio = opts.outWidth.toFloat() / heightPx
+    minOf((availableWidthPx / aspectRatio).toInt(), heightPx.toInt())
+  } else {
+    null
   }
 }
 
-private fun splitTextToHeight(
-  text: StyledText,
-  style: TextStyle,
-  widthPx: Int,
-  availableHeightPx: Int,
-  textMeasurer: TextMeasurer
-): SplitTextResult {
-  if (availableHeightPx <= 0 || text.text.isBlank()) return SplitTextResult.NothingFits
-
-  val measured = textMeasurer.measure(
-    text = text.toAnnotatedString(),
-    style = style,
-    constraints = Constraints.fixedWidth(widthPx)
-  )
-
-  var lastFittingLine = -1
-  for (line in 0 until measured.lineCount) {
-    if (measured.getLineBottom(line).toInt() <= availableHeightPx) {
-      lastFittingLine = line
-    } else {
-      break
-    }
+private fun measureBulletListHeight(
+  list: Node.BulletList,
+  availableWidthPx: Int,
+  textMeasurer: TextMeasurer,
+  density: Density,
+  fontFamilyMap: Map<String, FontFamily>
+): Int {
+  val bulletIndentPx = with(density) { 24.dp.roundToPx() }
+  val itemWidth = (availableWidthPx - bulletIndentPx).coerceAtLeast(1)
+  val listVPx = list.style.verticalSpacingPx(density)
+  return listVPx + list.items.sumOf { item ->
+    val itemVPx = item.style.verticalSpacingPx(density)
+    itemVPx + item.children.sumOf { measureNodeHeight(it, itemWidth, textMeasurer, density, fontFamilyMap) }
   }
-
-  if (lastFittingLine < 0) return SplitTextResult.NothingFits
-  if (lastFittingLine >= measured.lineCount - 1) return SplitTextResult.AllFit
-
-  val splitIndex = measured.getLineEnd(lastFittingLine, visibleEnd = true)
-    .coerceIn(1, text.text.length - 1)
-
-  // Hyphens.Auto adds a hyphen visually at the line break but does not insert it into the text.
-  // When the first part is rendered alone the word is no longer broken, so no hyphen appears.
-  // Fix: if the split landed in the middle of a word, append an explicit hyphen.
-  val needsHyphen = text.text.getOrNull(splitIndex - 1)?.isLetter() == true &&
-    text.text.getOrNull(splitIndex)?.isLetter() == true
-
-  val (first, second) = text.splitAt(splitIndex)
-  val firstPart = if (needsHyphen) first.copy(text = first.text + "-") else first
-  return SplitTextResult.Split(firstPart, second)
 }
 
-// ─────────────────────────── Height measurement ─────────────────────────────
+private fun measureTableHeight(
+  table: Node.Table,
+  availableWidthPx: Int,
+  textMeasurer: TextMeasurer,
+  density: Density,
+  fontFamilyMap: Map<String, FontFamily>
+): Int {
+  val tableVPx = table.style.verticalSpacingPx(density)
+  return tableVPx + table.rows.sumOf { row ->
+    val cellCount = row.cells.size.coerceAtLeast(1)
+    val cellWidth = (availableWidthPx / cellCount).coerceAtLeast(1)
+    row.cells.maxOfOrNull { cell ->
+      cell.children.sumOf { measureNodeHeight(it, cellWidth, textMeasurer, density, fontFamilyMap) }
+    } ?: 0
+  }
+}
 
 private fun measureElementHeight(
-  element: ContentElement,
-  contentWidthPx: Int,
-  fontFamily: FontFamily,
-  headlineStyles: Map<Int, TextStyle>,
-  subheadStyle: TextStyle,
-  bodyStyle: TextStyle,
+  element: Node.Element,
+  availableWidthPx: Int,
   textMeasurer: TextMeasurer,
-  density: Density
-): Int = with(density) {
-  when (element) {
-    is ContentElement.Heading -> {
-      val css = element.styles
-      val baseStyle = headlineStyles[element.level] ?: subheadStyle
-      val textWidthPx = (contentWidthPx - 2 * HEADING_HORIZONTAL_PADDING_DEFAULT.roundToPx()).coerceAtLeast(0)
-      val measured = textMeasurer.measure(
-        text = element.text.toAnnotatedString(),
-        style = baseStyle.copy(
-          fontFamily = fontFamily,
-          fontWeight = css.bold?.toFontWeight() ?: baseStyle.fontWeight,
-          fontStyle = css.italic?.toFontStyle() ?: baseStyle.fontStyle
-        ),
-        constraints = Constraints.fixedWidth(textWidthPx)
-      )
-      measured.size.height +
-        css.marginTop.toDp(default = HEADING_MARGIN_TOP_DEFAULT).roundToPx() +
-        css.marginBottom.toDp(default = HEADING_MARGIN_BOTTOM_DEFAULT).roundToPx()
-    }
+  density: Density,
+  fontFamilyMap: Map<String, FontFamily>
+): Int {
+  val style = element.style
 
-    is ContentElement.Paragraph -> {
-      val css = element.styles
-      val paddingStartPx = css.paddingStart.toDp(default = 16.dp).roundToPx()
-      val paddingEndPx = css.paddingEnd.toDp(default = 16.dp).roundToPx()
-      val paddingTopPx = css.paddingTop.toDp(default = 0.dp).roundToPx()
-      val paddingBottomPx = css.paddingBottom.toDp(default = 0.dp).roundToPx()
-      val textWidthPx = (contentWidthPx - paddingStartPx - paddingEndPx).coerceAtLeast(0)
-      val measured = textMeasurer.measure(
-        text = element.text.toAnnotatedString(),
-        style = bodyStyle.copy(
-          fontFamily = fontFamily,
-          lineHeight = 26.sp,
-          textIndent = TextIndent(firstLine = (css.textIndentEm ?: 1f) * 16.sp),
-          textAlign = css.textAlign?.toComposeAlign() ?: TextAlign.Justify,
-          hyphens = Hyphens.Auto,
-          lineBreak = LineBreak.Paragraph,
-          fontStyle = css.italic?.toFontStyle() ?: FontStyle.Normal,
-          fontWeight = css.bold?.toFontWeight() ?: FontWeight.Normal
-        ),
-        constraints = Constraints.fixedWidth(textWidthPx)
-      )
-      val contentHeight = measured.size.height +
-        css.marginTop.toDp(default = 0.dp).roundToPx() +
-        css.marginBottom.toDp(default = PARAGRAPH_MARGIN_BOTTOM_DEFAULT).roundToPx() +
-        paddingTopPx + paddingBottomPx
-      val minHeightPx = css.minHeight.toDp(default = 0.dp).roundToPx()
-      maxOf(contentHeight, minHeightPx)
-    }
+  val hPx = style.horizontalSpacingPx(density)
+  val contentWidth = (availableWidthPx - hPx).coerceAtLeast(1)
+  // Margins and padding are kept separate: CSS min-height (border-box) applies to content+padding,
+  // not to margins. Margins must always be added on top of the min-height check.
+  val marginPx = style.marginVerticalPx(density)
+  val paddingPx = style.paddingVerticalPx(density)
 
-    is ContentElement.Quote -> {
-      val css = element.styles
-      val marginStartPx = css.marginStart.toDp(default = QUOTE_MARGIN_START_DEFAULT).roundToPx()
-      val quoteWidthPx = (contentWidthPx - marginStartPx).coerceAtLeast(contentWidthPx / 2)
-      val measured = textMeasurer.measure(
-        text = element.text.toAnnotatedString(),
-        style = bodyStyle.copy(
-          fontFamily = fontFamily,
-          lineHeight = 26.sp,
-          fontStyle = css.italic?.toFontStyle() ?: FontStyle.Normal
-        ),
-        constraints = Constraints.fixedWidth(quoteWidthPx)
-      )
-      measured.size.height +
-        css.marginTop.toDp(default = QUOTE_MARGIN_TOP_DEFAULT).roundToPx() +
-        css.marginBottom.toDp(default = QUOTE_MARGIN_BOTTOM_DEFAULT).roundToPx()
-    }
+  val textStyle = style?.toTextStyle(fontFamilyMap) ?: TextStyle.Default.copy(
+    hyphens = Hyphens.Auto
+  )
 
-    is ContentElement.EpubImage -> {
-      val bitmap = BitmapFactory.decodeByteArray(element.data, 0, element.data.size)
-      val verticalPaddingPx = (IMAGE_VERTICAL_PADDING_DEFAULT * 2).roundToPx()
-      if (bitmap != null) {
-        val heightPx = bitmap.height.toFloat()
-        val aspectRatio = bitmap.width.toFloat() / heightPx
-        minOf((contentWidthPx / aspectRatio).toInt(), heightPx.toInt()) + verticalPaddingPx
-      } else {
-        verticalPaddingPx
-      }
+  val contentHeight = when {
+    element.children.size == 1 && element.children[0] is Node.Text -> {
+      val textNode = element.children[0] as Node.Text
+      textMeasurer.measure(
+        text = textNode.toAnnotatedString(),
+        style = textStyle,
+        constraints = Constraints.fixedWidth(contentWidth)
+      ).size.height
+    }
+    else -> element.children.sumOf {
+      measureNodeHeight(it, contentWidth, textMeasurer, density, fontFamilyMap)
     }
   }
+
+  val minHeightPx = style?.minHeight?.toPx(density)?.toInt() ?: 0
+  // min-height covers the content+padding box; margins are always added on top
+  return maxOf(contentHeight + paddingPx, minHeightPx) + marginPx
 }
 
-// ─────────────────────────── StyledText helpers ─────────────────────────────
+// ─────────────────────────── Splitting ───────────────────────────────────────
 
-private fun StyledText.splitAt(charIndex: Int): Pair<StyledText, StyledText> {
-  val idx = charIndex.coerceIn(0, text.length)
-  val firstSpans = mutableListOf<TextSpan>()
-  val secondSpans = mutableListOf<TextSpan>()
-  for (span in spans) {
+/**
+ * Tries to split [block] so the first part fits within [availableHeightPx].
+ * Returns a pair (firstPart, secondPart) or null if splitting is impossible
+ * (e.g. not enough space for even one line, or orphans/widows constraints prevent it).
+ *
+ * Only [Node.Element] nodes with a single [Node.Text] child can be split.
+ * Multi-child elements attempt a child-boundary split instead.
+ */
+private fun trySplitParagraph(
+  block: Node,
+  availableWidthPx: Int,
+  availableHeightPx: Int,
+  textMeasurer: TextMeasurer,
+  density: Density,
+  fontFamilyMap: Map<String, FontFamily>
+): Pair<Node, Node>? {
+  if (block !is Node.Element) return null
+  val element = block
+
+  // Multi-child element: try splitting between children
+  if (element.children.size > 1) {
+    return trySplitBetweenChildren(element, availableWidthPx, availableHeightPx, textMeasurer, density, fontFamilyMap)
+  }
+
+  val textNode = element.children.singleOrNull() as? Node.Text ?: return null
+  val style = element.style
+
+  val hPx = style.horizontalSpacingPx(density)
+  val contentWidth = (availableWidthPx - hPx).coerceAtLeast(1)
+  val vPx = style.verticalSpacingPx(density)
+  val textAvailable = (availableHeightPx - vPx).coerceAtLeast(0)
+  if (textAvailable <= 0) return null
+
+  val textStyle = style?.toTextStyle(fontFamilyMap)
+    ?: TextStyle.Default.copy(hyphens = Hyphens.Auto)
+
+  val layout = textMeasurer.measure(
+    text = textNode.toAnnotatedString(),
+    style = textStyle,
+    constraints = Constraints.fixedWidth(contentWidth)
+  )
+  if (layout.size.height <= textAvailable) return null
+  val totalLines = layout.lineCount
+
+  // Find the last line whose bottom edge fits within available height
+  var lastFitLine = -1
+  for (i in 0 until totalLines) {
+    if (layout.getLineBottom(i).toInt() <= textAvailable) lastFitLine = i else break
+  }
+  if (lastFitLine < 0) return null
+
+  // ── Apply orphans / widows constraints ──────────────────────────────────
+  val orphans = style?.orphans ?: DEFAULT_ORPHANS
+  val widows = style?.widows ?: DEFAULT_WIDOWS
+
+  // Lines in first part = lastFitLine + 1, lines in second part = totalLines - (lastFitLine + 1)
+  val firstPartLines = lastFitLine + 1
+  val secondPartLines = totalLines - firstPartLines
+
+  var splitLine = lastFitLine
+
+  // widows: second part must have >= widows lines
+  if (secondPartLines < widows) {
+    // Move the split point back so second part gains lines
+    val needed = widows - secondPartLines
+    splitLine -= needed
+  }
+
+  // orphans: first part must have >= orphans lines
+  if (splitLine + 1 < orphans) return null // impossible to satisfy both
+
+  if (splitLine < 0) return null
+
+  // ── Find split offset in text ────────────────────────────────────────────
+  val splitOffset = layout.getLineEnd(splitLine, visibleEnd = true)
+    .coerceAtMost(textNode.raw.length)
+
+  val rawBefore = textNode.raw.substring(0, splitOffset)
+  val rawAfter = textNode.raw.substring(splitOffset)
+  if (rawAfter.isBlank()) return null
+
+  val isMidWord = rawBefore.lastOrNull()?.isLetterOrDigit() == true &&
+    rawAfter.firstOrNull()?.isLetterOrDigit() == true
+
+  val (firstText, secondText) = splitNodeText(textNode, splitOffset, addHyphen = isMidWord)
+  if (secondText.raw.isBlank()) return null
+
+  // Second part of a split paragraph has no text-indent (it's a continuation)
+  val secondStyle = if (style?.textIndent != null) style.copy(textIndent = null) else style
+
+  val firstPart = element.copy(children = listOf(firstText))
+  val secondPart = element.copy(style = secondStyle, children = listOf(secondText))
+
+  return firstPart to secondPart
+}
+
+/**
+ * Tries to split an element with multiple children at a child boundary,
+ * so that as many children as possible fit within [availableHeightPx].
+ */
+private fun trySplitBetweenChildren(
+  element: Node.Element,
+  availableWidthPx: Int,
+  availableHeightPx: Int,
+  textMeasurer: TextMeasurer,
+  density: Density,
+  fontFamilyMap: Map<String, FontFamily>
+): Pair<Node, Node>? {
+  val style = element.style
+  val hPx = style.horizontalSpacingPx(density)
+  val contentWidth = (availableWidthPx - hPx).coerceAtLeast(1)
+  val vPx = style.verticalSpacingPx(density)
+  val contentAvailable = (availableHeightPx - vPx).coerceAtLeast(0)
+
+  var accumulated = 0
+  var splitIdx = -1
+  for ((idx, child) in element.children.withIndex()) {
+    val h = measureNodeHeight(child, contentWidth, textMeasurer, density, fontFamilyMap)
+    if (accumulated + h > contentAvailable) break
+    accumulated += h
+    splitIdx = idx
+  }
+  if (splitIdx < 0) return null
+  val firstChildren = element.children.subList(0, splitIdx + 1)
+  val secondChildren = element.children.subList(splitIdx + 1, element.children.size)
+  if (secondChildren.isEmpty()) return null
+
+  return element.copy(children = firstChildren) to element.copy(children = secondChildren)
+}
+
+// ─────────────────────────── Node.Text splitting ─────────────────────────────
+
+/**
+ * Splits [text] at character offset [offset] in [Node.Text.raw].
+ * Span ranges are adjusted: spans fully before the split stay in first part,
+ * spans fully after the split (offset-shifted) stay in second part,
+ * spans crossing the boundary are clipped to their respective side.
+ * If [addHyphen] is true a "-" is appended to the first part.
+ */
+private fun splitNodeText(text: Node.Text, offset: Int, addHyphen: Boolean): Pair<Node.Text, Node.Text> {
+  val safeOffset = offset.coerceIn(0, text.raw.length)
+
+  val firstRaw = text.raw.substring(0, safeOffset).trimEnd() + if (addHyphen) "-" else ""
+  val trimmedSecondRaw = text.raw.substring(safeOffset).trimStart()
+  // How many chars were stripped from the beginning of second part
+  val secondStartInOriginal = safeOffset + (text.raw.length - safeOffset - trimmedSecondRaw.length)
+
+  val firstSpans = text.spans.mapNotNull { span ->
     when {
-      span.end <= idx -> firstSpans.add(span)
-      span.start >= idx -> secondSpans.add(span.copy(start = span.start - idx, end = span.end - idx))
-      else -> {
-        // span.start < idx is guaranteed by the when conditions above
-        firstSpans.add(span.copy(end = idx))
-        secondSpans.add(span.copy(start = 0, end = span.end - idx))
-      }
-    }
+      span.end <= safeOffset -> span
+      span.start >= safeOffset -> null
+      else -> span.copy(end = safeOffset.coerceAtMost(firstRaw.length))
+    }?.validOrNull(firstRaw.length)
   }
-  return StyledText(text.substring(0, idx), firstSpans) to
-    StyledText(text.substring(idx), secondSpans)
+
+  val secondSpans = text.spans.mapNotNull { span ->
+    val newStart = (span.start - secondStartInOriginal).coerceAtLeast(0)
+    val newEnd = (span.end - secondStartInOriginal).coerceAtMost(trimmedSecondRaw.length)
+    if (newEnd <= newStart || newEnd <= 0 || newStart >= trimmedSecondRaw.length) null
+    else span.copy(start = newStart, end = newEnd)
+  }
+
+  return Node.Text(firstRaw, firstSpans) to Node.Text(trimmedSecondRaw, secondSpans)
 }
 
-private fun StyledText.trimLeadingWhitespace(): StyledText {
-  val trimmed = text.trimStart()
-  if (trimmed.length == text.length) return this
-  val offset = text.length - trimmed.length
-  return splitAt(offset).second
+private fun Span.validOrNull(maxLen: Int): Span? =
+  takeIf { start < end && start < maxLen && end > 0 }
+    ?.let { copy(end = end.coerceAtMost(maxLen)) }
+
+// ─────────────────────────── Helpers ─────────────────────────────────────────
+
+private fun Node.isEmpty(): Boolean = when (this) {
+  is Node.Text -> raw.isBlank()
+  is Node.Element -> children.isEmpty()
+  is Node.Image -> data.isEmpty()
+  is Node.HorizontalRule -> false
+  is Node.BulletList -> items.isEmpty()
+  is Node.Table -> rows.isEmpty()
 }
 
-// ─────────────────────────── Private helpers ────────────────────────────────
-
-private fun Boolean.toFontWeight() = if (this) FontWeight.Bold else FontWeight.Normal
-private fun Boolean.toFontStyle() = if (this) FontStyle.Italic else FontStyle.Normal
-private fun EpubTextAlign.toComposeAlign(): TextAlign = when (this) {
-  EpubTextAlign.Left -> TextAlign.Left
-  EpubTextAlign.Right -> TextAlign.Right
-  EpubTextAlign.Center -> TextAlign.Center
-  EpubTextAlign.Justify -> TextAlign.Justify
+private fun Node.pageBreakBefore(): PageBreak? = when (this) {
+  is Node.Element -> style?.pageBreakBefore
+  else -> null
 }
+
+/** Total horizontal spacing (margins + padding) in pixels. */
+private fun Style?.horizontalSpacingPx(density: Density): Int = if (this == null) 0 else with(density) {
+  (
+    (
+      marginStart.toDpOrZero(density) + marginEnd.toDpOrZero(density) +
+        paddingStart.toDpOrZero(density) + paddingEnd.toDpOrZero(density)
+      ).toPx()
+    ).toInt()
+}
+
+/** Total vertical spacing (margins + padding) in pixels. */
+private fun Style?.verticalSpacingPx(density: Density): Int =
+  marginVerticalPx(density) + paddingVerticalPx(density)
+
+/** Vertical margins only (top + bottom) in pixels. */
+private fun Style?.marginVerticalPx(density: Density): Int = if (this == null) 0 else with(density) {
+  ((marginTop.toDpOrZero(density) + marginBottom.toDpOrZero(density)).toPx()).toInt()
+}
+
+/** Vertical padding only (top + bottom) in pixels. */
+private fun Style?.paddingVerticalPx(density: Density): Int = if (this == null) 0 else with(density) {
+  ((paddingTop.toDpOrZero(density) + paddingBottom.toDpOrZero(density)).toPx()).toInt()
+}
+
+/** Returns true if the style has visual box properties (background or border) that must be preserved. */
+private fun Style?.hasVisualBox(): Boolean =
+  this != null && (background != null || border != null)

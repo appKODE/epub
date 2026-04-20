@@ -1,17 +1,21 @@
 package ru.kode.epub.feature.reader.ui.reader.component
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material3.Slider
@@ -29,85 +33,66 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import ru.kode.epub.core.ui.compose.modifiers.navigationBarsPadding
 import ru.kode.epub.core.uikit.theme.AppTheme
 import ru.kode.epub.core.uikit.touch.disableClickThrough
+import ru.kode.epub.feature.reader.ui.reader.Page
+import ru.kode.epub.lib.entity.TocItem
 import kotlin.math.roundToInt
-
-@Composable
-internal fun ReaderBottomBar(
-  visible: Boolean,
-  pagerState: PagerState,
-  params: ColumnParams,
-  onScrollToElement: (Int) -> Unit,
-  insets: ReaderInsets,
-  modifier: Modifier = Modifier
-) {
-  AnimatedVisibility(
-    visible = visible,
-    enter = slideInVertically { it },
-    exit = slideOutVertically { it },
-    modifier = modifier
-  ) {
-    val scope = rememberCoroutineScope()
-    val currentPage = pagerState.currentPage
-    val prevAnchor = params.tocAnchorPages.lastOrNull { (_, pageIndex) -> pageIndex < currentPage }
-    val nextAnchor = params.tocAnchorPages.firstOrNull { (_, pageIndex) -> pageIndex > currentPage }
-    // In 2-column mode two chapters can appear on the same screen — show the last one
-    val currentChapterTitle = params.tocAnchorPages
-      .lastOrNull { (_, pageIndex) -> pageIndex <= currentPage }
-      ?.first
-      ?.entry
-      ?.title
-      .orEmpty()
-    val chapterFractions = remember(params.tocAnchorPages, params.screenPageCount) {
-      if (params.screenPageCount <= 1) emptyList()
-      else params.tocAnchorPages.map { (_, pageIndex) -> pageIndex.toFloat() / (params.screenPageCount - 1) }
-    }
-
-    BottomBar(
-      currentPage = currentPage,
-      totalPages = params.screenPageCount,
-      chapterTitle = currentChapterTitle,
-      chapterFractions = chapterFractions,
-      prevChapterDist = prevAnchor?.let { (_, pageIndex) -> currentPage - pageIndex },
-      nextChapterDist = nextAnchor?.let { (_, pageIndex) -> pageIndex - currentPage },
-      onPrevChapter = { prevAnchor?.let { (anchor, _) -> onScrollToElement(anchor.elementIndex) } },
-      onNextChapter = { nextAnchor?.let { (anchor, _) -> onScrollToElement(anchor.elementIndex) } },
-      onPageSelected = { page -> scope.launch { pagerState.scrollToPage(page) } },
-      modifier = Modifier
-        .fillMaxWidth()
-        .background(AppTheme.colors.surfaceBackground)
-        .navigationBarsPadding(start = false, end = false),
-      sideStart = insets.sideStart,
-      sideEnd = insets.sideEnd
-    )
-  }
-}
 
 @Suppress("ComposableEventParameterNaming")
 @Composable
-private fun BottomBar(
-  currentPage: Int,
+internal fun ReaderBottomBar(
+  pagerState: PagerState,
+  toc: List<TocItem>,
+  pages: List<Page>,
+  columnCount: Int,
   totalPages: Int,
-  chapterTitle: String,
-  chapterFractions: List<Float>,
-  prevChapterDist: Int?,
-  nextChapterDist: Int?,
-  onPrevChapter: () -> Unit,
-  onNextChapter: () -> Unit,
   onPageSelected: (Int) -> Unit,
-  modifier: Modifier = Modifier,
-  sideStart: Dp = 0.dp,
-  sideEnd: Dp = 0.dp
+  modifier: Modifier = Modifier
 ) {
+  val currentPage = pagerState.currentPage
+  val tocScreenPages = remember(toc, pages, columnCount) {
+    if (pages.isEmpty()) return@remember emptyList()
+    val chapterFirstCalcPage = buildMap {
+      pages.forEachIndexed { idx, page ->
+        if (!containsKey(page.chapterIndex)) put(page.chapterIndex, idx)
+      }
+    }
+
+    fun collectItems(items: List<TocItem>): List<Pair<TocItem, Int>> = buildList {
+      for (item in items) {
+        val calcIdx = chapterFirstCalcPage[item.chapterIndex] ?: continue
+        add(item to (calcIdx / columnCount))
+        addAll(collectItems(item.children))
+      }
+    }
+    collectItems(toc).sortedBy { it.second }
+  }
+  val prevAnchor = tocScreenPages.lastOrNull { (_, pageIndex) -> pageIndex < currentPage }
+  val nextAnchor = tocScreenPages.firstOrNull { (_, pageIndex) -> pageIndex > currentPage }
+  val prevChapterDist = prevAnchor?.let { (_, pageIndex) -> currentPage - pageIndex }
+  val nextChapterDist = nextAnchor?.let { (_, pageIndex) -> pageIndex - currentPage }
+  val chapterFractions = remember(tocScreenPages, totalPages) {
+    if (totalPages <= 1) emptyList()
+    else tocScreenPages.map { (_, pageIndex) -> pageIndex.toFloat() / (totalPages - 1) }
+  }
+  val currentChapterTitle = tocScreenPages
+    .lastOrNull { (_, pageIndex) -> pageIndex <= currentPage }
+    ?.first?.title
+    .orEmpty()
+  val coroutineScope = rememberCoroutineScope()
+  val sideInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
+  val layoutDirection = LocalLayoutDirection.current
+  val sideStart = sideInsets.asPaddingValues().calculateStartPadding(layoutDirection)
+  val sideEnd = sideInsets.asPaddingValues().calculateEndPadding(layoutDirection)
   Column(
     modifier = modifier
+      .background(AppTheme.colors.surfaceReader)
       .disableClickThrough()
       .padding(start = 8.dp + sideStart, end = 8.dp + sideEnd, top = 4.dp, bottom = 4.dp)
   ) {
@@ -118,7 +103,9 @@ private fun BottomBar(
     ) {
       Box(modifier = Modifier.width(64.dp)) {
         if (prevChapterDist != null) {
-          TextButton(onClick = onPrevChapter) {
+          TextButton(
+            onClick = { prevAnchor.let { (_, p) -> coroutineScope.launch { pagerState.animateScrollToPage(p) } } }
+          ) {
             Text(
               text = "<$prevChapterDist",
               style = AppTheme.typography.body2,
@@ -129,7 +116,7 @@ private fun BottomBar(
       }
       val label = buildString {
         append("${currentPage + 1}/$totalPages")
-        if (chapterTitle.isNotBlank()) append("  $chapterTitle")
+        if (currentChapterTitle.isNotBlank()) append("  $currentChapterTitle")
       }
       Text(
         text = label,
@@ -142,7 +129,9 @@ private fun BottomBar(
       )
       Box(modifier = Modifier.width(64.dp), contentAlignment = Alignment.CenterEnd) {
         if (nextChapterDist != null) {
-          TextButton(onClick = onNextChapter) {
+          TextButton(
+            onClick = { nextAnchor.let { (_, p) -> coroutineScope.launch { pagerState.animateScrollToPage(p) } } }
+          ) {
             Text(
               text = "$nextChapterDist>",
               style = AppTheme.typography.body2,
@@ -161,9 +150,7 @@ private fun BottomBar(
 
     Slider(
       value = sliderPosition,
-      colors = SliderDefaults.colors(
-        thumbColor = AppTheme.colors.iconAccent
-      ),
+      colors = SliderDefaults.colors(thumbColor = AppTheme.colors.iconAccent),
       onValueChange = {
         sliderPosition = it
         onPageSelected(it.roundToInt())

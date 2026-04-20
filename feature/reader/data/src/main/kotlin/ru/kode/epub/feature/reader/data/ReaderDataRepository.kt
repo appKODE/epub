@@ -83,7 +83,13 @@ class ReaderDataRepository @Inject constructor(
         .getOrNull()
     }
       ?.let(Uri::fromFile)
-    val book = createBook(epub = metadata, id = id, uri = copy.toString(), cover = cover.toString())
+    val book = createBook(
+      epub = metadata,
+      totalChapters = null,
+      id = id,
+      uri = copy.toString(),
+      cover = cover.toString()
+    )
     booksDatabase.bookQueries.insertOrReplace(book)
     book.toDomainModel()
   }

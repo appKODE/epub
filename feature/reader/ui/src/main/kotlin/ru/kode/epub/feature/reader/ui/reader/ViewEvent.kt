@@ -1,6 +1,13 @@
 package ru.kode.epub.feature.reader.ui.reader
 
 import android.graphics.BitmapFactory
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,19 +20,19 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -36,86 +43,98 @@ import ru.kode.epub.core.ui.screen.event.ViewEventHostScope
 import ru.kode.epub.core.uikit.R
 import ru.kode.epub.core.uikit.component.ModalBottomSheet
 import ru.kode.epub.core.uikit.theme.AppTheme
-import ru.kode.epub.lib.entity.TocEntry
+import ru.kode.epub.lib.entity.CoverImage
+import ru.kode.epub.lib.entity.Metadata
+import ru.kode.epub.lib.entity.TocItem
 import java.util.Locale
 
-@Immutable
-data class TocSheet(
-  val toc: List<TocEntry>,
-  val onChapterSelected: (TocEntry) -> Unit
-) : ViewEvent.BottomSheet {
+internal fun tocSheet(
+  toc: List<TocItem>,
+  onChapterSelected: (Int) -> Unit
+) = object : ViewEvent.BottomSheet {
   @Composable
   override fun ViewEventHostScope.Content() {
-    ModalBottomSheet(onDismissRequest = ::dismissEventPresentation) {
-      Column(Modifier.navigationBarsPadding()) {
-        TocSheetContent(
-          toc = toc,
-          onEntryClick = { entry ->
-            onChapterSelected(entry)
-            dismissEventPresentation()
-          }
-        )
-      }
+    ModalBottomSheet(onDismissRequest = ::dismissEventPresentation, containerColor = AppTheme.colors.surfaceReader) {
+      TocSheetContent(
+        toc = toc,
+        onEntryClick = { chapterIndex ->
+          onChapterSelected(chapterIndex)
+          dismissEventPresentation()
+        },
+        modifier = Modifier.navigationBarsPadding()
+      )
     }
   }
 }
 
-@Immutable
-data class BookInfoSheet(
-  val info: BookInfo
-) : ViewEvent.BottomSheet {
+internal fun bookInfoSheet(
+  metadata: Metadata,
+  coverImage: CoverImage?
+) = object : ViewEvent.BottomSheet {
   @Composable
   override fun ViewEventHostScope.Content() {
-    ModalBottomSheet(onDismissRequest = ::dismissEventPresentation) {
-      Column(Modifier.navigationBarsPadding()) {
-        BookInfoSheetContent(info = info)
-      }
+    ModalBottomSheet(onDismissRequest = ::dismissEventPresentation, containerColor = AppTheme.colors.surfaceReader) {
+      BookInfoSheetContent(
+        metadata = metadata,
+        coverImage = coverImage,
+        modifier = Modifier.navigationBarsPadding()
+      )
     }
   }
 }
 
-// ─────────────────────────── TOC sheet content ──────────────────────────────
+// ─────────────────────────── TOC sheet ──────────────────────────────────────
 
 @Composable
 private fun TocSheetContent(
-  toc: List<TocEntry>,
-  onEntryClick: (TocEntry) -> Unit
+  toc: List<TocItem>,
+  onEntryClick: (Int) -> Unit,
+  modifier: Modifier = Modifier
 ) {
+  // key: index in the top-level toc list; value: expanded state
   val expanded = remember { mutableStateMapOf<Int, Boolean>() }
 
   Text(
-    text = "Содержание",
+    text = "Contents",
     style = AppTheme.typography.headline5,
     color = AppTheme.colors.textPrimary,
     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
   )
   HorizontalDivider()
-  LazyColumn {
-    toc.forEachIndexed { index, entry ->
-      if (entry.children.isEmpty()) {
+  LazyColumn(modifier = modifier) {
+    toc.forEachIndexed { index, item ->
+      if (item.children.isEmpty()) {
         item(key = "leaf-$index") {
           TocLeafRow(
-            title = entry.title,
+            title = item.title,
             indent = false,
-            onClick = { onEntryClick(entry) }
+            onClick = { onEntryClick(item.chapterIndex) }
           )
         }
       } else {
         item(key = "section-$index") {
           val isExpanded = expanded[index] ?: true
-          TocSectionRow(
-            title = entry.title,
-            isExpanded = isExpanded,
-            onToggle = { expanded[index] = !isExpanded }
-          )
-        }
-        if (expanded[index] ?: true) {
-          items(entry.children, key = { child -> "child-$index-${child.title}" }) { child ->
-            TocLeafRow(
-              title = child.title,
-              indent = true,
-              onClick = { onEntryClick(child) }
+          Column {
+            TocSectionRow(
+              title = item.title,
+              isExpanded = isExpanded,
+              onToggle = { expanded[index] = !isExpanded }
             )
+            AnimatedVisibility(
+              visible = isExpanded,
+              enter = expandVertically() + fadeIn(tween(200)),
+              exit = shrinkVertically() + fadeOut(tween(150))
+            ) {
+              Column {
+                item.children.forEach { child ->
+                  TocLeafRow(
+                    title = child.title,
+                    indent = true,
+                    onClick = { onEntryClick(child.chapterIndex) }
+                  )
+                }
+              }
+            }
           }
         }
       }
@@ -145,15 +164,16 @@ private fun TocSectionRow(
         .weight(1f)
         .padding(vertical = 14.dp)
     )
+    val chevronRotation by animateFloatAsState(
+      targetValue = if (isExpanded) 0f else 180f,
+      animationSpec = tween(durationMillis = 250)
+    )
     IconButton(onClick = onToggle) {
       Icon(
-        painter = if (isExpanded) {
-          painterResource(R.drawable.ic_chevron_up_24)
-        } else {
-          painterResource(R.drawable.ic_chevron_down_24)
-        },
+        painter = painterResource(R.drawable.ic_chevron_up_24),
         contentDescription = null,
-        tint = AppTheme.colors.iconSecondary
+        tint = AppTheme.colors.iconSecondary,
+        modifier = Modifier.rotate(chevronRotation)
       )
     }
   }
@@ -181,17 +201,20 @@ private fun TocLeafRow(
   )
 }
 
-// ─────────────────────── Book info sheet content ────────────────────────────
+// ─────────────────────── Book info sheet ────────────────────────────────────
 
 @Composable
-private fun BookInfoSheetContent(info: BookInfo) {
+private fun BookInfoSheetContent(
+  metadata: Metadata,
+  coverImage: CoverImage?,
+  modifier: Modifier = Modifier
+) {
   LazyColumn(
-    modifier = Modifier
+    modifier = modifier
       .fillMaxWidth()
-      .padding(horizontal = 16.dp),
-    verticalArrangement = Arrangement.spacedBy(8.dp)
+      .padding(horizontal = 16.dp)
   ) {
-    info.coverImage?.let { cover ->
+    coverImage?.let { cover ->
       item {
         val bitmap = remember(cover.data) {
           BitmapFactory.decodeByteArray(cover.data, 0, cover.data.size)?.asImageBitmap()
@@ -212,24 +235,24 @@ private fun BookInfoSheetContent(info: BookInfo) {
     item {
       Spacer(Modifier.height(4.dp))
       Text(
-        text = info.title,
+        text = metadata.title,
         style = AppTheme.typography.headline4,
         color = AppTheme.colors.textPrimary
       )
     }
-    if (info.author.isNotBlank()) {
-      item { InfoRow(label = "Автор", value = info.author) }
+    if (metadata.author.isNotBlank()) {
+      item { InfoRow(label = "Author", value = metadata.author) }
     }
-    if (info.categories.isNotEmpty()) {
-      item { InfoRow(label = "Жанр", value = info.categories.joinToString(", ")) }
+    if (metadata.categories.isNotEmpty()) {
+      item { InfoRow(label = "Genre", value = metadata.categories.joinToString(", ")) }
     }
-    if (info.language.isNotBlank()) {
-      item { InfoRow(label = "Язык", value = localizedLanguageName(info.language)) }
+    if (metadata.language.isNotBlank()) {
+      item { InfoRow(label = "Language", value = localizedLanguageName(metadata.language)) }
     }
-    if (info.description.isNotBlank()) {
+    if (metadata.description.isNotBlank()) {
       item {
         Text(
-          text = info.description,
+          text = metadata.description,
           style = AppTheme.typography.body2,
           color = AppTheme.colors.textSecondary
         )

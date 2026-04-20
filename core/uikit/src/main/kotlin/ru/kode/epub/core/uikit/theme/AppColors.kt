@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.Color
 data class AppColors(
   val isLight: Boolean,
   val surfaceBackground: Color,
+  val surfaceReader: Color,
   val surfaceLayer1: Color,
   val surfaceLayer2: Color,
   val surfaceLayer3: Color,
