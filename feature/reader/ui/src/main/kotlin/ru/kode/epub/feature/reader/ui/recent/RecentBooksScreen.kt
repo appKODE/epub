@@ -34,8 +34,7 @@ import kotlin.time.Clock
 fun RecentBooksScreen(
   viewModel: RecentBooksViewModel
 ) = AppScreen(
-  viewModel = viewModel,
-  onBackPress = { }
+  viewModel = viewModel
 ) { state ->
   Box(
     modifier = Modifier

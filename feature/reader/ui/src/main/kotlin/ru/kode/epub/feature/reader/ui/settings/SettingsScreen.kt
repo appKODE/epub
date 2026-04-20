@@ -41,8 +41,7 @@ import ru.kode.epub.feature.reader.ui.component.NightModeListItem
 fun SettingsScreen(
   viewModel: SettingsViewModel
 ) = AppScreen(
-  viewModel = viewModel,
-  onBackPress = { }
+  viewModel = viewModel
 ) { state ->
   Column(
     modifier = Modifier

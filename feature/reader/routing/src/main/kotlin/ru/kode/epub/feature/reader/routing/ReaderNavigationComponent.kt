@@ -13,6 +13,7 @@ import ru.kode.epub.core.routing.FlowComponentContext
 import ru.kode.epub.core.routing.FlowNavigationComponent
 import ru.kode.epub.core.routing.Node
 import ru.kode.epub.core.routing.Screen
+import ru.kode.epub.core.routing.asFlow
 import ru.kode.epub.core.routing.viewModel
 import ru.kode.epub.core.ui.screen.event.ViewEventsHostMediator
 import ru.kode.epub.core.uikit.component.Snackbar
@@ -59,11 +60,23 @@ class ReaderNavigationComponent(
     bottomBarController
       .sectionClicks()
       .onEach { section ->
-        bottomBarController.setActiveSection(section)
         when (section) {
           BottomBarSection.Recent -> navigate { bringToFront(Config.Recent) }
           BottomBarSection.Settings -> navigate { bringToFront(Config.Settings) }
         }
+      }
+      .launchIn(scope)
+
+    stack.asFlow()
+      .mapDistinctChanges { it.active.instance }
+      .onEach { config ->
+        bottomBarController.setActiveSection(
+          section = when (config) {
+            is Child.Reader -> BottomBarSection.Recent
+            is Child.Recent -> BottomBarSection.Recent
+            is Child.Settings -> BottomBarSection.Settings
+          }
+        )
       }
       .launchIn(scope)
 
