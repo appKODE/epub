@@ -161,7 +161,9 @@ private fun BottomBar(
 
     Slider(
       value = sliderPosition,
-      colors = SliderDefaults.colors(thumbColor = AppTheme.colors.textOnAccent),
+      colors = SliderDefaults.colors(
+        thumbColor = AppTheme.colors.iconAccent,
+      ),
       onValueChange = {
         sliderPosition = it
         onPageSelected(it.roundToInt())
