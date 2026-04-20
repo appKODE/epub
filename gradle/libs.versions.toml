@@ -30,6 +30,7 @@ cachefix = "3.0.3"
 ksp = "2.3.4"
 
 firebase-crashlytics-plugin = "3.0.7"
+google-services = "4.4.4"
 firebase-crashlytics = "20.0.5"
 
 [libraries]
@@ -120,3 +121,4 @@ kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", vers
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebase-crashlytics-plugin" }
+google-services = { id = "com.google.gms.google-services", version.ref = "google-services"}

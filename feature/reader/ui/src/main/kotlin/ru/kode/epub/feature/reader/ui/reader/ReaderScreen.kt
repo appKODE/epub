@@ -121,7 +121,7 @@ fun ReaderScreen(
           params = params,
           currentElementIndex = state.currentElementIndex,
           scrollToElementIndex = state.scrollToElementIndex,
-          onScrollHandled = viewModel::onScrollHandled,
+          onScrollHandle = viewModel::onScrollHandled,
           onScroll = viewModel::onScroll
         )
       }
