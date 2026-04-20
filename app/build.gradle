@@ -2,6 +2,7 @@ plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.android)
   alias(libs.plugins.cachefix)
+  alias(libs.plugins.firebase.crashlytics)
 
   id 'di-convention'
   id 'compose-convention'
@@ -62,6 +63,7 @@ android {
 dependencies {
   implementation libs.androidx.activity.compose
   implementation libs.bundles.ui
+  implementation libs.firebase.crashlytics
 
   implementation project(":core:routing")
   implementation project(":core:uikit")

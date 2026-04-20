@@ -29,6 +29,9 @@ detekt-rules-compose = "1.4.0"
 cachefix = "3.0.3"
 ksp = "2.3.4"
 
+firebase-crashlytics-plugin = "3.0.7"
+firebase-crashlytics = "20.0.5"
+
 [libraries]
 androidx-core = { module = "androidx.core:core", version.ref = "androidx-core" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core" }
@@ -75,6 +78,8 @@ detekt-plugin = { module = "io.gitlab.arturbosch.detekt:detekt-gradle-plugin", v
 cachefix-plugin = { module = "org.gradle.android.cache-fix:org.gradle.android.cache-fix.gradle.plugin", version.ref = "cachefix" }
 ksp-plugin = { module = "com.google.devtools.ksp:com.google.devtools.ksp.gradle.plugin", version.ref = "ksp" }
 
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics", version.ref = "firebase-crashlytics" }
+
 [bundles]
 core = [
     "kotlin-coroutines-core",
@@ -114,3 +119,4 @@ cachefix = { id = "org.gradle.android.cache-fix", version.ref = "cachefix" }
 kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
+firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebase-crashlytics-plugin" }

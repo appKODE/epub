@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "908727777973",
+    "project_id": "epub-4f34a",
+    "storage_bucket": "epub-4f34a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:908727777973:android:9f17c350b383419c6f5cfc",
+        "android_client_info": {
+          "package_name": "ru.kode.epub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB0-27e55PWohDTudASDb8LFOh9jhVmxUA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
