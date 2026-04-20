@@ -19,6 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import ru.kode.epub.core.ui.compose.modifiers.borderTop
 import ru.kode.epub.core.ui.compose.modifiers.cutoutPadding
+import ru.kode.epub.core.ui.compose.modifiers.navigationBarsPadding
 import ru.kode.epub.core.ui.compose.modifiers.surface
 import ru.kode.epub.core.ui.compose.resolveRef
 import ru.kode.epub.core.ui.screen.AppScreen
@@ -49,6 +50,7 @@ fun SettingsScreen(
       .statusBarsPadding()
       .background(color = AppTheme.colors.surfaceBackground)
       .fillMaxSize()
+      .navigationBarsPadding(bottom = false)
   ) {
     TopAppBar(title = stringResource(id = R.string.settings_screen_title))
     LazyColumn(

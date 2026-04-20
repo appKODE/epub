@@ -19,6 +19,7 @@ import kotlinx.datetime.toLocalDateTime
 import ru.kode.epub.core.domain.entity.resRef
 import ru.kode.epub.core.domain.randomUuid
 import ru.kode.epub.core.ui.compose.modifiers.cutoutPadding
+import ru.kode.epub.core.ui.compose.modifiers.navigationBarsPadding
 import ru.kode.epub.core.ui.content.UiMessage
 import ru.kode.epub.core.ui.screen.AppScreen
 import ru.kode.epub.core.uikit.component.ErrorMessage
@@ -42,6 +43,7 @@ fun RecentBooksScreen(
       .statusBarsPadding()
       .background(color = AppTheme.colors.surfaceBackground)
       .fillMaxSize()
+      .navigationBarsPadding(bottom = false)
   ) {
     if (!state.loading && state.books.isEmpty()) {
       BooksStub()
