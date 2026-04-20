@@ -36,6 +36,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import ru.kode.epub.core.domain.entity.ScreenOrientation
 import ru.kode.epub.core.domain.mapDistinctChanges
 import ru.kode.epub.core.routing.DefaultFlowComponentContext
 import ru.kode.epub.core.ui.compose.LocalScreenOrientation
@@ -83,7 +84,7 @@ open class MainActivity : ComponentActivity() {
 
       AppTheme(useDarkTheme = isDark) {
         WindowBackgroundEffect(color = AppTheme.colors.surfaceBackground)
-        SystemBarsColorEffect(isDark)
+        SystemBarsColorEffect(isDark, orientation)
         CompositionLocalProvider(
           LocalScreenOrientation provides orientation,
           LocalViewEventsHostMediator provides viewEventsMediator
@@ -114,9 +115,9 @@ open class MainActivity : ComponentActivity() {
   }
 
   @Composable
-  private fun SystemBarsColorEffect(isDarkTheme: Boolean) {
+  private fun SystemBarsColorEffect(isDarkTheme: Boolean, orientation: ScreenOrientation) {
     val view = LocalView.current
-    LaunchedEffect(isDarkTheme) {
+    LaunchedEffect(isDarkTheme, view, orientation) {
       val windowInsetsController = window?.let {
         WindowCompat.getInsetsController(it, view)
       }

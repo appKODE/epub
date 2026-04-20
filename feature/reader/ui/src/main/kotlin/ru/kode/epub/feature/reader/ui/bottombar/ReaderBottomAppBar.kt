@@ -3,6 +3,8 @@ package ru.kode.epub.feature.reader.ui.bottombar
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -54,12 +56,12 @@ fun MainBottomAppBar(
   onSectionClick: (BottomBarSection) -> Unit,
   modifier: Modifier = Modifier
 ) {
-  val rotation = LocalScreenOrientation.current
+  val orientation = LocalScreenOrientation.current
   AnimatedVisibility(
     modifier = modifier,
     visible = isVisible,
-    enter = fadeIn(),
-    exit = fadeOut()
+    enter = if (orientation == ScreenOrientation.Portrait) slideInVertically { it } else fadeIn(),
+    exit = if (orientation == ScreenOrientation.Portrait) slideOutVertically { it } else fadeOut()
   ) {
     val tabs = BottomBarSection.entries.map { section ->
       Tab(
@@ -69,7 +71,7 @@ fun MainBottomAppBar(
         isActive = section.isActive(state)
       )
     }
-    when (rotation) {
+    when (orientation) {
       ScreenOrientation.Portrait -> {
         Box(
           modifier = Modifier

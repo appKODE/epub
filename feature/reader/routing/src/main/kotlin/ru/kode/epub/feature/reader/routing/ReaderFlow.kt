@@ -1,6 +1,7 @@
 package ru.kode.epub.feature.reader.routing
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateBounds
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
@@ -13,10 +14,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.LookaheadScope
+import androidx.compose.ui.layout.layout
+import com.arkivanov.decompose.Child.Created
 import com.arkivanov.decompose.extensions.compose.stack.Children
-import com.arkivanov.decompose.extensions.compose.stack.animation.predictiveback.predictiveBackAnimation
+import com.arkivanov.decompose.extensions.compose.stack.animation.Direction
+import com.arkivanov.decompose.extensions.compose.stack.animation.StackAnimation
+import com.arkivanov.decompose.extensions.compose.stack.animation.plus
+import com.arkivanov.decompose.extensions.compose.stack.animation.scale
 import com.arkivanov.decompose.extensions.compose.stack.animation.slide
 import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimation
+import com.arkivanov.decompose.extensions.compose.stack.animation.stackAnimator
 import ru.kode.epub.core.domain.entity.ScreenOrientation
 import ru.kode.epub.core.ui.compose.LocalScreenOrientation
 import ru.kode.epub.core.ui.flow.LocalDecomposeBackHandler
@@ -41,11 +49,7 @@ fun ReaderFlow(
     ) {
       Children(
         stack = component.stack,
-        animation = predictiveBackAnimation(
-          backHandler = component.backHandler,
-          fallbackAnimation = stackAnimation(slide()),
-          onBack = component::handleBack
-        ),
+        animation = readerFlowAnimation(),
         content = { child ->
           when (val instance = child.instance) {
             is Child.Reader -> ReaderScreen(instance.viewModel)
@@ -72,23 +76,64 @@ fun ReaderFlowContent(
   content: @Composable () -> Unit
 ) {
   val orientation = LocalScreenOrientation.current
-  when (orientation) {
-    ScreenOrientation.Portrait -> Column {
-      Box(modifier = Modifier.weight(1f)) {
-        content()
+  LookaheadScope {
+    when (orientation) {
+      ScreenOrientation.Portrait -> Column {
+        Box(
+          modifier = Modifier
+            .weight(1f)
+            .animateBounds(this@LookaheadScope),
+          content = { content() }
+        )
+        ReaderBottomAppBar(bottomBarController)
       }
-      ReaderBottomAppBar(
-        controller = bottomBarController
-      )
-    }
 
-    ScreenOrientation.Landscape -> Row {
-      Box(modifier = Modifier.weight(1f)) {
-        content()
+      ScreenOrientation.Landscape -> Row {
+        Box(
+          modifier = Modifier
+            .weight(1f)
+            .animateBounds(this@LookaheadScope),
+          content = { content() }
+        )
+        ReaderBottomAppBar(bottomBarController)
       }
-      ReaderBottomAppBar(
-        controller = bottomBarController
-      )
     }
   }
 }
+
+private fun readerFlowAnimation(): StackAnimation<Any, Child> = stackAnimation(
+  selector = { from: Created<*, Child>, to: Created<*, Child>, direction: Direction ->
+    if (from.instance is Child.Reader || to.instance is Child.Reader) {
+      stack()
+    } else when (from.instance) {
+      is Child.Recent -> when (direction) {
+        Direction.ENTER_FRONT -> slideOut()
+        Direction.EXIT_FRONT -> slideOut()
+        Direction.ENTER_BACK -> slideIn()
+        Direction.EXIT_BACK -> slideIn()
+      }
+
+      is Child.Settings -> when (direction) {
+        Direction.ENTER_FRONT -> slideIn()
+        Direction.EXIT_FRONT -> slideIn()
+        Direction.ENTER_BACK -> slideOut()
+        Direction.EXIT_BACK -> slideOut()
+      }
+
+      else -> stack()
+    }
+  }
+)
+
+private fun stack() = slide() + scale()
+private fun slideIn() = stackAnimator { factor, _, content -> content(Modifier.offsetXFactor(factor)) }
+private fun slideOut() = stackAnimator { factor, _, content -> content(Modifier.offsetXFactor(-factor)) }
+
+private fun Modifier.offsetXFactor(factor: Float): Modifier =
+  layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints)
+
+    layout(placeable.width, placeable.height) {
+      placeable.placeRelative(x = (placeable.width.toFloat() * factor).toInt(), y = 0)
+    }
+  }

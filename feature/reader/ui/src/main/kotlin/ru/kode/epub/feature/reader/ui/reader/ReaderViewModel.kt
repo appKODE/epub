@@ -63,7 +63,6 @@ class ReaderViewModel @Inject constructor(
       }
       .launchIn(viewModelScope)
 
-
     model.readerSettings
       .mapNotNull { settings ->
         settings.find { it.selected is TurnPageMode }?.selected as? TurnPageMode
