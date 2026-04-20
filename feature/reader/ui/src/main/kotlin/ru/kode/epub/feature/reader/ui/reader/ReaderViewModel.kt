@@ -94,6 +94,10 @@ class ReaderViewModel @Inject constructor(
     )
   }
 
+  fun toggleBars() {
+    stateFlow.update { it.copy(barsVisible = !it.barsVisible) }
+  }
+
   fun onScrollHandled() {
     stateFlow.update { it.copy(scrollToElementIndex = null) }
   }

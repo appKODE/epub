@@ -2,6 +2,7 @@ package ru.kode.epub.feature.reader.ui.reader.component
 
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -20,6 +21,7 @@ internal fun PageContent(
   columnCount: Int,
   screenPageIndex: Int,
   fontFamilyMap: Map<String, FontFamily>,
+  paddingValues: PaddingValues,
   modifier: Modifier = Modifier
 ) {
   Row(modifier) {
@@ -33,6 +35,7 @@ internal fun PageContent(
           Column(
             modifier = Modifier
               .fillMaxSize()
+              .padding(paddingValues)
               .padding(horizontal = PAGE_HORIZONTAL_PADDING, vertical = PAGE_VERTICAL_PADDING)
           ) {
             val calcIdx = screenPageIndex * columnCount + colIdx

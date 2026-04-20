@@ -15,6 +15,7 @@ data class ViewState(
   val scrollMode: PageScrollMode? = null,
   val columnMode: ColumnMode? = null,
   val turnPageMode: TurnPageMode? = null,
+  val barsVisible: Boolean = false,
   val scrollToElementIndex: Int? = null,
   val currentElementIndex: Int? = null
 )

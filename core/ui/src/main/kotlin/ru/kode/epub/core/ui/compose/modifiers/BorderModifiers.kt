@@ -24,3 +24,21 @@ fun Modifier.borderTop(
     )
   }
 }
+
+fun Modifier.borderBottom(
+  strokeWidth: Dp,
+  color: Color,
+  alpha: Float = 1f,
+  startIndent: Dp = 0.dp
+): Modifier {
+  return drawWithContent {
+    drawContent()
+    drawLine(
+      color = color,
+      start = Offset(x = startIndent.toPx(), y = size.height),
+      end = Offset(x = size.width, y = size.height),
+      strokeWidth = strokeWidth.toPx(),
+      alpha = alpha
+    )
+  }
+}
