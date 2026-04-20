@@ -35,7 +35,7 @@ android {
       signingConfig = signingConfigs.debug
       debuggable true
       minifyEnabled false
-      resValue "string", "app_name", "[KODE] Epub"
+      resValue "string", "app_name", "Epub"
     }
   }
 
