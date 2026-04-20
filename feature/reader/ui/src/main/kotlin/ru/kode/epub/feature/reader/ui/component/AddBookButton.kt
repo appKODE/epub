@@ -8,10 +8,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import ru.kode.epub.core.ui.compose.modifiers.surface
-import ru.kode.epub.core.uikit.R
 import ru.kode.epub.core.uikit.theme.AppTheme
+import ru.kode.epub.feature.reader.ui.R
+import ru.kode.epub.core.uikit.R as UiKitR
 
 @Composable
 internal fun AddBookButton(
@@ -29,9 +31,9 @@ internal fun AddBookButton(
     contentAlignment = Alignment.Center
   ) {
     Icon(
-      painter = painterResource(R.drawable.ic_plus_32),
+      painter = painterResource(UiKitR.drawable.ic_plus_32),
       tint = AppTheme.colors.iconContrastPrimary,
-      contentDescription = "plus icon"
+      contentDescription = stringResource(R.string.reader_add_book_description)
     )
   }
 }

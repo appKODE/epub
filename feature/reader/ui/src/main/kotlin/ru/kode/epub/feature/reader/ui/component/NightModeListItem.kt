@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import ru.kode.epub.core.domain.entity.TextRef
 import ru.kode.epub.core.domain.entity.resRef
@@ -48,7 +49,7 @@ internal fun NightModeListItem(
       Icon(
         modifier = Modifier.size(24.dp),
         painter = painterResource(id = UiKitR.drawable.ic_checkmark_24),
-        contentDescription = "checkmark icon",
+        contentDescription = stringResource(R.string.settings_checkmark_description),
         tint = AppTheme.colors.iconAccent
       )
     } else {
@@ -72,9 +73,10 @@ internal val NightMode.iconRes: Int
     NightMode.Auto -> UiKitR.drawable.ic_mobile_24
   }
 
-internal val NightMode.iconContentDescription: String
+private val NightMode.iconContentDescription: String
+  @Composable
   get() = when (this) {
-    NightMode.Day -> "day mode icon"
-    NightMode.Night -> "night mode icon"
-    NightMode.Auto -> "system mode icon"
+    NightMode.Day -> stringResource(R.string.settings_day_mode_description)
+    NightMode.Night -> stringResource(R.string.settings_night_mode_description)
+    NightMode.Auto -> stringResource(R.string.settings_system_mode_description)
   }

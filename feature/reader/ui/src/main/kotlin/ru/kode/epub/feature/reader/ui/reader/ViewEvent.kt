@@ -36,17 +36,19 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ru.kode.epub.core.ui.screen.event.ViewEvent
 import ru.kode.epub.core.ui.screen.event.ViewEventHostScope
-import ru.kode.epub.core.uikit.R
 import ru.kode.epub.core.uikit.component.ModalBottomSheet
 import ru.kode.epub.core.uikit.theme.AppTheme
+import ru.kode.epub.feature.reader.ui.R
 import ru.kode.epub.lib.entity.CoverImage
 import ru.kode.epub.lib.entity.Metadata
 import ru.kode.epub.lib.entity.TocItem
 import java.util.Locale
+import ru.kode.epub.core.uikit.R as UiKitR
 
 internal fun tocSheet(
   toc: List<TocItem>,
@@ -95,7 +97,7 @@ private fun TocSheetContent(
   val expanded = remember { mutableStateMapOf<Int, Boolean>() }
 
   Text(
-    text = "Contents",
+    text = stringResource(R.string.reader_toc_title),
     style = AppTheme.typography.headline5,
     color = AppTheme.colors.textPrimary,
     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
@@ -170,7 +172,7 @@ private fun TocSectionRow(
     )
     IconButton(onClick = onToggle) {
       Icon(
-        painter = painterResource(R.drawable.ic_chevron_up_24),
+        painter = painterResource(UiKitR.drawable.ic_chevron_up_24),
         contentDescription = null,
         tint = AppTheme.colors.iconSecondary,
         modifier = Modifier.rotate(chevronRotation)
@@ -241,13 +243,23 @@ private fun BookInfoSheetContent(
       )
     }
     if (metadata.author.isNotBlank()) {
-      item { InfoRow(label = "Author", value = metadata.author) }
+      item { InfoRow(label = stringResource(R.string.reader_book_info_author), value = metadata.author) }
     }
     if (metadata.categories.isNotEmpty()) {
-      item { InfoRow(label = "Genre", value = metadata.categories.joinToString(", ")) }
+      item {
+        InfoRow(
+          label = stringResource(R.string.reader_book_info_genre),
+          value = metadata.categories.joinToString(", ")
+        )
+      }
     }
     if (metadata.language.isNotBlank()) {
-      item { InfoRow(label = "Language", value = localizedLanguageName(metadata.language)) }
+      item {
+        InfoRow(
+          label = stringResource(R.string.reader_book_info_language),
+          value = localizedLanguageName(metadata.language)
+        )
+      }
     }
     if (metadata.description.isNotBlank()) {
       item {

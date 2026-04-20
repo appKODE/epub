@@ -33,8 +33,8 @@ android {
   buildTypes {
     debug {
       signingConfig = signingConfigs.debug
-      debuggable false
-      minifyEnabled true
+      debuggable true
+      minifyEnabled false
       resValue "string", "app_name", "[KODE] Epub"
     }
   }

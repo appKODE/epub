@@ -21,4 +21,15 @@
     <string name="book_import_error_format">Book import error: incorrect format</string>
     <string name="book_import_error_io">Book import error: file system error</string>
     <string name="book_import_error_unknown">Something had gone wrong</string>
+    <string name="reader_toc_title">Contents</string>
+    <string name="reader_book_info_author">Author</string>
+    <string name="reader_book_info_genre">Genre</string>
+    <string name="reader_book_info_language">Language</string>
+    <string name="reader_book_cover_description">Book cover</string>
+    <string name="reader_remove_book_description">Remove book</string>
+    <string name="reader_add_book_description">Add book</string>
+    <string name="settings_checkmark_description">Selected</string>
+    <string name="settings_day_mode_description">Day mode</string>
+    <string name="settings_night_mode_description">Night mode</string>
+    <string name="settings_system_mode_description">System mode</string>
 </resources>

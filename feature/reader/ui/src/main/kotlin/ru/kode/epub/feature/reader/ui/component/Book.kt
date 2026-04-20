@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImagePainter
@@ -33,11 +34,12 @@ import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.request.error
-import ru.kode.epub.core.uikit.R
 import ru.kode.epub.core.uikit.component.VSpacer
 import ru.kode.epub.core.uikit.modifier.shimmer
 import ru.kode.epub.core.uikit.theme.AppTheme
 import ru.kode.epub.feature.reader.domain.entity.Book
+import ru.kode.epub.feature.reader.ui.R
+import ru.kode.epub.core.uikit.R as UiKitR
 
 @Composable
 fun BookGridItem(
@@ -57,7 +59,7 @@ fun BookGridItem(
       val painter = rememberAsyncImagePainter(
         model = ImageRequest.Builder(LocalContext.current)
           .data(book.cover)
-          .error(R.drawable.ic_placeholder_24)
+          .error(UiKitR.drawable.ic_placeholder_24)
           .crossfade(true)
           .build(),
         imageLoader = LocalContext.current.imageLoader
@@ -68,7 +70,7 @@ fun BookGridItem(
           .aspectRatio(0.625f)
           .shimmer(visible = loaderState is AsyncImagePainter.State.Loading),
         painter = painter,
-        contentDescription = "book cover",
+        contentDescription = stringResource(R.string.reader_book_cover_description),
         contentScale = ContentScale.Crop
       )
 
@@ -113,8 +115,8 @@ fun BookGridItem(
     ) {
       Icon(
         modifier = Modifier.size(24.dp),
-        painter = painterResource(R.drawable.ic_trash_24),
-        contentDescription = "remove book icon",
+        painter = painterResource(UiKitR.drawable.ic_trash_24),
+        contentDescription = stringResource(R.string.reader_remove_book_description),
         tint = AppTheme.colors.iconNegative
       )
     }
