@@ -9,7 +9,6 @@ import com.arkivanov.essenty.backhandler.BackCallback
 import com.arkivanov.essenty.backhandler.BackHandler
 
 val LocalDecomposeBackHandler = compositionLocalOf<BackHandler> {
-  // Dummy implementation for a non-decompose navigation
   object : BackHandler {
     override fun isRegistered(callback: BackCallback): Boolean = false
     override fun register(callback: BackCallback) = Unit

@@ -142,7 +142,7 @@ private fun ScrollEffects(
   params: ColumnParams,
   currentElementIndex: Int?,
   scrollToElementIndex: Int?,
-  onScrollHandled: () -> Unit,
+  onScrollHandle: () -> Unit,
   onScroll: (String, Int) -> Unit,
   scope: CoroutineScope
 ) {
@@ -151,7 +151,7 @@ private fun ScrollEffects(
     scrollToElementIndex?.let { targetIndex ->
       val calcIdx = params.calculatorPages.indexOfFirst { page -> page.any { it.index == targetIndex } }
       if (calcIdx >= 0) pagerState.scrollToPage(calcIdx / params.columnCount)
-      onScrollHandled()
+      onScrollHandle()
     }
   }
 

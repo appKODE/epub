@@ -54,6 +54,7 @@ object EpubParser {
     )
   }
 
+  @Suppress("CyclomaticComplexMethod")
   fun parse(context: Context, uri: Uri): EpubBook {
     val fileMap = readZipEntries(context, uri)
 
@@ -314,6 +315,7 @@ object EpubParser {
       .mapNotNull { parseNcxNavPoint(it, ncxPath, chapterPathToIndex, chapters) }
   }
 
+  @Suppress("ReturnCount")
   private fun parseNcxNavPoint(
     navPoint: Element,
     ncxPath: String,
@@ -321,11 +323,14 @@ object EpubParser {
     chapters: List<EpubChapter>
   ): TocEntry? {
     val title = navPoint.selectFirst("> navLabel > text")
-      ?.text()?.trim()?.takeIf { it.isNotEmpty() }
+      ?.text()
+      ?.trim()
+      ?.takeIf { it.isNotEmpty() }
       ?: return null
 
     val src = navPoint.selectFirst("> content")
-      ?.attr("src")?.takeIf { it.isNotEmpty() }
+      ?.attr("src")
+      ?.takeIf { it.isNotEmpty() }
       ?: return null
 
     val srcFile = src.substringBefore("#")
@@ -359,6 +364,7 @@ object EpubParser {
       .mapNotNull { parseNavItem(it, navPath, chapterPathToIndex, chapters) }
   }
 
+  @Suppress("ReturnCount")
   private fun parseNavItem(
     li: Element,
     navPath: String,
@@ -625,7 +631,8 @@ object EpubParser {
       }
       if (data != null) {
         val size = decls["background-size"]
-          ?.split(Regex("\\s+"))?.firstOrNull()
+          ?.split(Regex("\\s+"))
+          ?.firstOrNull()
           ?.let { CssResolver.parseLength(it) }
         val positionParts = decls["background-position"]?.split(Regex("\\s+"))
         val posX = positionParts?.getOrNull(0)?.let { parseBackgroundPosition(it, horizontal = true) }

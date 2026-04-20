@@ -20,9 +20,5 @@ data class UiMessage(
     val name: TextRef,
     val listener: () -> Unit,
     val description: TextRef? = null
-  ) {
-    enum class Type {
-      Generic
-    }
-  }
+  )
 }

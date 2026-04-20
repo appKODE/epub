@@ -19,7 +19,7 @@ class SettingsViewModel @Inject constructor(
 ) : ViewModel<ViewState, Unit>() {
   override fun initialState() = ViewState()
 
-  override fun onStart() {
+  init {
     model.readerSettings
       .onEach { settings -> stateFlow.update { it.copy(settings = settings) } }
       .launchIn(viewModelScope)

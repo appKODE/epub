@@ -28,7 +28,6 @@ import kotlin.uuid.Uuid
  * A reference handle representing a task registered with the [Scheduler].
  * Can be used to start, cancel, check status of the task.
  */
-@OptIn(ExperimentalUuidApi::class)
 @Suppress("UseDataClass")
 class TaskHandle<A, R>(
   val name: String,
@@ -45,12 +44,6 @@ class TaskHandle<A, R>(
   }
 }
 
-/**
- * A reference handle representing a job for the [taskHandle].
- * Gets created when a certain task is started in the [Scheduler].
- */
-// NOTE: not using data class because do not want "copy" and leaking internal members
-@OptIn(ExperimentalUuidApi::class)
 @Suppress("UseDataClass")
 class JobHandle(
   val taskHandle: TaskHandle<Any?, Any?>,
@@ -58,9 +51,6 @@ class JobHandle(
   internal val job: Job
 ) {
   companion object {
-    /**
-     * Represents a non-existing job handle
-     */
     val NIL = JobHandle(TaskHandle.NIL, Uuid.NIL, Job())
   }
 
@@ -69,30 +59,10 @@ class JobHandle(
   }
 }
 
-/**
- * A state of a running task's job
- */
 enum class RunState {
-  /**
-   * Job is not started
-   */
   NotStarted,
-
-  /**
-   * Job is currently running
-   */
   Running,
-
-  /**
-   * Job is succesfully finished.
-   * Result can be found in [JobState#result].
-   */
   FinishedSuccess,
-
-  /**
-   * Job has finished with error.
-   * Error can be found in [JobState#error].
-   */
   FinishedError
 }
 
@@ -101,43 +71,14 @@ enum class RunState {
  */
 @OptIn(ExperimentalUuidApi::class)
 data class JobState(
-  /**
-   * Unique identifier of the job
-   */
   val jobId: Uuid,
-  /**
-   * Unique identifier of the registered task which is executed by this job
-   */
   val taskId: Uuid,
-  /**
-   * Argument with which job was started
-   */
   val argument: Any?,
-  /**
-   * Current run state
-   */
   val runState: RunState = RunState.NotStarted,
-  /**
-   * In case job has finished with error, this field will contain the corresponding
-   * throwable, otherwise it will be null
-   */
   val error: Throwable? = null,
-  /**
-   * In case job has successfully finished, this field will contain the produced
-   * result, otherwise it will  be null
-   */
   val result: Any? = null,
-  /**
-   * An optional tag assigned when starting a job using [Scheduler#start]
-   */
   val tag: Any? = null
 ) {
-  companion object {
-    /**
-     * Represents a non-existing job state
-     */
-    val NIL = JobState(Uuid.NIL, Uuid.NIL, null)
-  }
 
   override fun toString(): String {
     return if (jobId == Uuid.NIL) {
@@ -180,39 +121,15 @@ interface TaskStateChangeListener {
  * passed to [start], see [restart] documentation for more information.
  */
 class Scheduler(
-  /**
-   * Scope to be used as a parent for all tasks/jobs in this scheduler.
-   * If this scope gets cancelled, all tasks/jobs will be cancelled too.
-   */
   val scope: CoroutineScope,
-  /**
-   * Default dispatcher to use
-   */
   val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
-  /**
-   * A callback to be called whenever an uncaught exception is thrown.
-   * Note that these are usually exceptions which happen outside of task's "body"-function
-   * (which is passed to the [registerTask]), because exceptions inside the "body" are caught
-   * and stored in the [JobState#error] field
-   */
   val onUncaughtException: (taskId: Uuid, taskName: String, error: Throwable) -> Unit = { name, id, e ->
     println("warning: uncaught exception from task \"$name[$id]\"")
     e.printStackTrace()
   }
 ) {
-  // TODO use configurable entry count?
-  /**
-   * A map from either JobHandle.id or TaskHandle.id to an argument object.
-   */
   private val argumentCache: MutableMap<Uuid, Any?> = ConcurrentHashMap()
-
-  // TODO evict states after some time/entry-count?
   private val _taskJobState: MutableMap<Uuid, JobState> = ConcurrentHashMap()
-
-  /**
-   * A map of jobId to task job states
-   */
-  val taskJobState: Map<Uuid, JobState> = _taskJobState
 
   private val stateChangeListeners: MutableList<TaskStateChangeListener> = CopyOnWriteArrayList()
 
@@ -230,14 +147,6 @@ class Scheduler(
     stateChangeListeners.remove(listener)
   }
 
-  /**
-   * Registers a task in this scheduler. Returns a [TaskHandle] which can be used to start
-   * this task with [start], [startLatest], [startSuspended].
-   *
-   * @param name a descriptive task name. Usually used for debug purposes.
-   * @param dispatcher a dispatcher to use when running this task
-   * @param body a function representing this task's work
-   */
   fun <A, R> registerTask(
     name: String,
     dispatcher: CoroutineDispatcher = defaultDispatcher,
@@ -254,54 +163,14 @@ class Scheduler(
     )
   }
 
-  /**
-   * Starts a new job for task represented by [handle].
-   *
-   * The job instance will be created for this task execution which can be observed using [TaskStateChangeListener]
-   * added with [addTaskStateChangeListener].
-   *
-   * @param handle represents a registered task to start
-   * @param argument an argument to pass to the task's body function
-   * @param tag an arbitrary tag to assign to the resulting task job. It will be stored in [JobState]
-   * and can be used identify groups of task jobs when needed
-   */
   fun <A> start(handle: TaskHandle<A, *>, argument: A, tag: Any? = null): JobHandle {
     return startInternal(handle, argument, tag, cancelPrevious = false)
   }
 
-  /**
-   * Starts a new job for task represented by [handle] while also cancelling any previous jobs started for this task.
-   * In other words, this behaves much like `Flow.flatMapLatest` does.
-   *
-   * The job instance will be created for this task execution which can be observed using [TaskStateChangeListener]
-   * added with [addTaskStateChangeListener].
-   *
-   * @param handle represents a registered task to start
-   * @param argument an argument to pass to the task's body function
-   * @param tag an arbitrary tag to assign to the resulting task job. It will be stored in [JobState]
-   * and can be used identify groups of task jobs when needed
-   */
   fun <A> startLatest(handle: TaskHandle<A, *>, argument: A, tag: Any? = null): JobHandle {
     return startInternal(handle, argument, tag, cancelPrevious = true)
   }
 
-  /**
-   * Starts a new job for task represented by [handle] immediately and suspends until the task is finished.
-   *
-   * Task result can be obtained from the returned [JobState] value.
-   *
-   * The job instance will be created for this task execution which can be observed using [TaskStateChangeListener]
-   * added with [addTaskStateChangeListener].
-   *
-   * Note that [TaskStateChangeListener#onJobCancelled] won't be called in this case and if you
-   * need to detect task cancellation, you should wrap this suspending call in try/catch and watch
-   * for a [CancellationException] to be thrown.
-   *
-   * @param handle represents a registered task to start
-   * @param argument an argument to pass to the task's body function
-   * @param tag an arbitrary tag to assign to the resulting task job. It will be stored in [JobState]
-   * and can be used identify groups of task jobs when needed
-   */
   suspend fun <A, R> startSuspended(handle: TaskHandle<A, R>, argument: A, tag: Any? = null): JobState {
     val jobId = Uuid.random()
     argumentCache.put(jobId, argument as Any?)
@@ -313,8 +182,6 @@ class Scheduler(
     val jobId = Uuid.random()
     argumentCache.put(jobId, argument as Any?)
     argumentCache.put(handle.id, argument as Any?)
-    // NOTE @dz there can be a race if children will change between we get them here and
-    // before new job gets scheduled
     val previousJobs = handle.scope.coroutineContext.job.children.toList()
     val job = handle.scope.launch {
       if (cancelPrevious) {
@@ -380,12 +247,6 @@ class Scheduler(
     }
   }
 
-  /**
-   * Restarts the task referenced by [handle].
-   * Reuses the argument of the most recent [start] call.
-   * Note that there is an overload which accepts [JobHandle] instead and it will use the argument
-   * from the particular job start.
-   */
   fun <A, R> restart(handle: TaskHandle<A, R>): JobHandle {
     @Suppress("UNCHECKED_CAST")
     val arg = argumentCache[handle.id] as? A?
@@ -396,12 +257,6 @@ class Scheduler(
     }
   }
 
-  /**
-   * Restarts the task referenced by job [handle].
-   * Reuses the argument of the specified job [handle].
-   * Note that there is an overload which accepts [TaskHandle] instead and it will use the argument
-   * from the most recent task start.
-   */
   fun restart(handle: JobHandle): JobHandle {
     val arg = argumentCache[handle.id]
     return if (arg != null) {
@@ -411,55 +266,25 @@ class Scheduler(
     }
   }
 
-  /**
-   * Cancels all jobs currently executing for [taskHandle] (if any).
-   * Registered change listeners will get [TaskStateChangeListener#onJobCancelled] notification
-   */
   fun cancel(taskHandle: TaskHandle<*, *>) {
     taskHandle.scope.coroutineContext.cancelChildren()
   }
 
-  /**
-   * Cancels all jobs currently executing for [taskHandle] (if any).
-   */
   fun cancel(jobHandle: JobHandle) {
     jobHandle.job.cancel()
   }
 
-  /**
-   * Cancels all jobs currently executing for [taskHandle] (if any) and suspends until
-   * all of them are cancelled
-   */
   suspend fun cancelAndJoin(taskHandle: TaskHandle<*, *>) {
     taskHandle.scope.coroutineContext.job.children.forEach {
       it.cancelAndJoin()
     }
   }
 
-  /**
-   * Cancels all jobs currently executing for [jobHandle] and suspends until
-   * it is cancelled
-   */
   suspend fun cancelAndJoin(jobHandle: JobHandle) {
     jobHandle.job.cancelAndJoin()
   }
 }
 
-/**
- * A simple converter from callback-based observation (using [TaskStateChangeListener]) to reactive-based
- * observation using [Flow].
- *
- * If you wish to do some action (for example starting a task with [Scheduler#start]) only after this flow
- * subscription is established, you can use some combination of "shareIn and/or replay and/or custom implementation
- * of SharingStarted" to fine tune subscription options. After converting the returned [Flow] to a [SharedFlow],
- * you can also use "Flow.onSubscription {}" extension function.
- *
- * See https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.flow/share-in.html
- * for examples and more details.
- *
- * Note that if anything more complex or specific is required, you can always implement the functionality you
- * need in a similar fashion.
- */
 @OptIn(ExperimentalUuidApi::class)
 fun Scheduler.observeStateChanges(handle: TaskHandle<*, *>): Flow<JobState> {
   return callbackFlow {

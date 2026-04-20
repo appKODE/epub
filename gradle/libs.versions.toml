@@ -8,7 +8,7 @@ kotlin-date-time = "0.7.1"
 androidx-core = "1.18.0"
 androidx-annotation = "1.10.0"
 androidx-activity-compose = "1.13.0"
-androidx-compat = "1.7.1"
+activity-ktx = "1.13.0"
 
 kotlin-inject = "0.8.0"
 anvil = "0.1.6"
@@ -17,7 +17,6 @@ sqldelight = "2.3.2"
 
 jsoup = "1.18.3"
 timber = "5.0.1"
-leakcanary = "2.14"
 
 compose = "1.10.6"
 material3 = "1.4.0"
@@ -29,17 +28,13 @@ detekt = "1.23.8"
 detekt-rules-compose = "1.4.0"
 cachefix = "3.0.3"
 ksp = "2.3.4"
-activity-ktx = "1.13.0"
 
 [libraries]
 androidx-core = { module = "androidx.core:core", version.ref = "androidx-core" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core" }
 androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidx-annotation" }
-
+androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activity-ktx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "androidx-activity-compose" }
-
-androidx-compat = { module = "androidx.appcompat:appcompat", version.ref = "androidx-compat" }
-# appcompat-resources = { module = "androidx.appcompat:appcompat-resources", version.ref = "androidx-compat" }
 
 kotlin-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlin-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
@@ -57,9 +52,6 @@ kotlin-inject-compiler = { module = "me.tatarka.inject:kotlin-inject-compiler-ks
 anvil-runtime = { module = "software.amazon.lastmile.kotlin.inject.anvil:runtime", version.ref = "anvil" }
 anvil-compiler = { module = "software.amazon.lastmile.kotlin.inject.anvil:compiler", version.ref = "anvil" }
 
-leakcanary = { module = "com.squareup.leakcanary:leakcanary-android", version.ref = "leakcanary" }
-leakcanary-watcher = { module = "com.squareup.leakcanary:leakcanary-object-watcher-android", version.ref = "leakcanary" }
-
 compose-ui = { module = "androidx.compose.ui:ui", version.ref = "compose" }
 compose-ui-util = { module = "androidx.compose.ui:ui-util", version.ref = "compose" }
 compose-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "compose" }
@@ -67,9 +59,7 @@ compose-runtime = { module = "androidx.compose.runtime:runtime", version.ref = "
 compose-graphics = { module = "androidx.compose.animation:animation-graphics", version.ref = "compose" }
 compose-material3 = { group = "androidx.compose.material3", name = "material3-android", version.ref = "material3" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
-coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
 
-# Decompose
 decompose-core = { module = "com.arkivanov.decompose:decompose", version.ref = "decompose" }
 decompose-compose-ext = { module = "com.arkivanov.decompose:extensions-compose", version.ref = "decompose" }
 essenty-lifecycle = { module = "com.arkivanov.essenty:lifecycle", version.ref = "essenty" }
@@ -84,7 +74,6 @@ compose-compiler-plugin = { module = "org.jetbrains.kotlin:compose-compiler-grad
 detekt-plugin = { module = "io.gitlab.arturbosch.detekt:detekt-gradle-plugin", version.ref = "detekt" }
 cachefix-plugin = { module = "org.gradle.android.cache-fix:org.gradle.android.cache-fix.gradle.plugin", version.ref = "cachefix" }
 ksp-plugin = { module = "com.google.devtools.ksp:com.google.devtools.ksp.gradle.plugin", version.ref = "ksp" }
-androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activity-ktx" }
 
 [bundles]
 core = [

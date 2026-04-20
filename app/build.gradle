@@ -61,10 +61,7 @@ android {
 
 dependencies {
   implementation libs.androidx.activity.compose
-  implementation libs.androidx.compat
-  // implementation libs.appcompat.resources
   implementation libs.bundles.ui
-  implementation libs.coil.network.ktor
 
   implementation project(":core:routing")
   implementation project(":core:uikit")

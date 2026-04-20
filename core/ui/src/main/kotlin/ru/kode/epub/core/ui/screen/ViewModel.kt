@@ -7,7 +7,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,25 +36,20 @@ abstract class ViewModel<VS : Any, R : Any> {
 
   val navigateBackEvents = _navigateBackEvents.asSharedFlow()
   val screenEvents = _screenEvents.asSharedFlow()
-  val viewEventsFlow: Flow<ViewEvent> = eventsFlow
+  val viewEventsFlow = eventsFlow.asSharedFlow()
 
   abstract fun initialState(): VS
   protected val stateFlow = MutableStateFlow(initialState())
+
   val viewStateFlow: StateFlow<VS>
     get() = stateFlow.asStateFlow()
 
-  open fun onStart() = Unit
-  protected open fun onDetach() = Unit
-  protected open fun onDestroy() = Unit
-
   fun detach() {
     attachedScope.coroutineContext.cancelChildren()
-    onDetach()
   }
 
   fun destroy() {
     viewModelScope.cancel()
-    onDestroy()
   }
 
   protected fun sendViewEvent(event: ViewEvent) {

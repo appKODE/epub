@@ -11,7 +11,6 @@ import com.arkivanov.essenty.backhandler.BackHandlerOwner
 import com.arkivanov.essenty.lifecycle.doOnCreate
 import com.arkivanov.essenty.lifecycle.doOnDestroy
 import com.arkivanov.essenty.lifecycle.doOnPause
-import com.arkivanov.essenty.lifecycle.doOnStart
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -54,7 +53,6 @@ abstract class FlowNavigationComponent<Config : Any, Child : Node>(
       childFactory = { config: Config, context: ComponentContext ->
         val child = childFactory(config, context)
         if (child is Screen) {
-          context.lifecycle.doOnStart { child.viewModel.onStart() }
           context.lifecycle.doOnPause { child.viewModel.detach() }
           context.lifecycle.doOnDestroy { child.viewModel.destroy() }
         }

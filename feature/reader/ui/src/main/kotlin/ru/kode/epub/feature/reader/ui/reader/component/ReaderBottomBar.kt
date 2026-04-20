@@ -162,7 +162,7 @@ private fun BottomBar(
     Slider(
       value = sliderPosition,
       colors = SliderDefaults.colors(
-        thumbColor = AppTheme.colors.iconAccent,
+        thumbColor = AppTheme.colors.iconAccent
       ),
       onValueChange = {
         sliderPosition = it
